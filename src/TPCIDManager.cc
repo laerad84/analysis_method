@@ -216,7 +216,8 @@ TPCPoly::TPCPoly( char* name, char* title ){
   this->Init();
 }
 TPCPoly::~TPCPoly(){
-  TH2Poly::~TH2Poly();
+  //TH2Poly::~TH2Poly();
+  ;
 }
 void TPCPoly::Init(){
   if( gTPCIDHandler == NULL ){
