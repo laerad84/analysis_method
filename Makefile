@@ -20,7 +20,7 @@ ROOTCINT     = $(ROOTSYS)/bin/rootcint
 DEFS		+= -DCERNLIB_TYPE -DCERNLIB_LINUX -DCERNLIB_UNIX -DHEP_SHORT_NAMES
 GENFITDIR    =$(GENFIT_ROOT_DIR)
 #/Users/jwlee/local/util/genfit/GenFit_INSTALL
-BOOSTDIR     = $(BOOSTDIR)
+BOOSTDIR     = $(BOOST_ROOT_DIR)
 #/Users/jwlee/local/util/boost/boost_1_61_0_compile
 
 CXX_SOURCES  = $(wildcard src/*.cc)
