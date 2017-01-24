@@ -300,7 +300,8 @@ TPCPolyRTheta::TPCPolyRTheta(char* name, char* title ){
 }
 
 TPCPolyRTheta::~TPCPolyRTheta(){
-  TH2Poly::~TH2Poly();
+  ;
+  //TH2Poly::~TH2Poly();
 }
 
 void TPCPolyRTheta::Init(){
