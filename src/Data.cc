@@ -27,7 +27,7 @@ HSprial::HSprial(): ID(-1),X(0),Y(0),Z(0),R(0),DTheta(0),DY(0),RL(0),InitPos(0,0
   ;
 }
 HSprial::HSprial(Int_t id, Double_t x, Double_t y, Double_t z, Double_t r, Double_t dY, Double_t dTheta, Int_t rl):
-  ID(id),X(x),Y(y),Z(z),R(r),DTheta(dTheta),DY(dY),RL(rl),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0).FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0){
+  ID(id),X(x),Y(y),Z(z),R(r),DTheta(dTheta),DY(dY),RL(rl),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0),FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0) {
   ;
 }
 HSprial::HSprial(const HSprial& right){
