@@ -24,11 +24,15 @@ void HCircle::Print(){
 
 ClassImp(HSprial)
 HSprial::HSprial(): ID(-1),X(0),Y(0),Z(0),R(0),DTheta(0),DY(0),RL(0),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0),FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0){
-  ;
+  EX=0;
+  EZ=0;
+  ER=0;
 }
 HSprial::HSprial(Int_t id, Double_t x, Double_t y, Double_t z, Double_t r, Double_t dY, Double_t dTheta, Int_t rl):
   ID(id),X(x),Y(y),Z(z),R(r),DTheta(dTheta),DY(dY),RL(rl),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0),FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0) {
-  ;
+  EX=0;
+  EZ=0;
+  ER=0;
 }
 HSprial::HSprial(const HSprial& right){
   ID = right.ID;
@@ -36,6 +40,9 @@ HSprial::HSprial(const HSprial& right){
   Y  = right.Y;
   Z  = right.Z;
   R  = right.R;
+  EX = right.EX;
+  EZ = right.EZ;
+  ER = right.ER;
   DTheta = right.DTheta;
   DY     = right.DY;
   RL     = right.RL;
@@ -52,7 +59,8 @@ HSprial::~HSprial(){
 }
 void HSprial::Print(){
   std::cout<< "Sprial ID : " << ID << "\n"
-	   << "XYZR      : " << X << ", " << Y << ", " << Z << ", " << R << "\n"
+	   << "XYZR      : " << X << ", " << Y  << ", " << Z  << ", " << R << "\n"
+	   << "EXZR      : " << EX <<", " << EZ << ", " << ER << "\n"
 	   << "DTheta    : " << DTheta << "\n"
 	   << "DY        : " << DY << "\n"
 	   << "RL        : " << RL << "\n"
@@ -92,7 +100,37 @@ TPolyLine3D* HSprial::GenerateHelix(){
   }
   return tmpLine;
 }
-
+void HSprial::CalculateDist( TVector3 hitpos, Double_t& dR, Double_t& dY ){
+  Double_t theta = TMath::ATan2(hitpos.X() - X, hitpos.Z() - Z );
+  Double_t thetaOff= TMath::ATan2( InitPos.X() - X, InitPos.Z() - Z);
+  Double_t tmpX  = R * TMath::Sin( theta ) + X;
+  Double_t tmpZ  = R * TMath::Cos( theta ) + Z;
+  Double_t tmpY  = DY/DTheta*(theta-thetaOff) + InitPos.Y();
+  Double_t tmpR  = TMath::Sqrt( (hitpos.X()-X)*(hitpos.X()-X) + (hitpos.Z()-Z)*(hitpos.Z()-Z));
+  Double_t pitch = 2*DY/DTheta*TMath::Pi();
+  dY = hitpos.Y() - tmpY;
+  if( TMath::Abs(dY) > pitch/2 ){
+    if( dY > 0 ){ dY= pitch -dY;}
+    else{ dY = dY + pitch;}
+  }
+  dR = tmpR - R;
+  //std::cout<< dY << "\t" << dR << std::endl;
+}
+void HSprial::CalculateDist( TGraph2D* grTrack, Double_t& dR, Double_t& dY ){
+  Int_t nPoint=0;
+  Double_t RSum=0;
+  Double_t YSum=0;
+  for( int i = 0; i< grTrack->GetN(); i++){
+    TVector3 pos(grTrack->GetX()[i], grTrack->GetY()[i],grTrack->GetZ()[i]);
+    Double_t dy,dr;
+    CalculateDist( pos, dr, dy );
+    RSum += TMath::Abs(dr);
+    YSum += TMath::Abs(dy);
+    nPoint++;
+  }
+  dR = RSum / nPoint;
+  dY = YSum / nPoint;
+}
 TPolyLine* HSprial::GenerateArc(){
   TPolyLine* tmpLine = new TPolyLine();
 
@@ -116,14 +154,43 @@ TPolyLine* HSprial::GenerateArc(){
   }
   return tmpLine;
 }
-
 TF1* HSprial::GenerateXY(){
-  TF1* func = new TF1("func","sin(x)");
+  Double_t thetaOffset = TMath::ATan2( InitPos.X() -X ,InitPos.Z() - Z);
+  Double_t c = this->DY/this->DTheta;
+  Double_t yOff = InitPos.Y();
+  TF1* func = new TF1("func","[0]*sin([1]*x+[2])+[3]");
+  func->SetParameter(0,this->R);
+  func->SetParameter(1,1./c);
+  func->SetParameter(2,thetaOffset-yOff/c);
+  func->SetParameter(3,yOff);
   return func;
 }
 TF1* HSprial::GenerateZY(){
-  TF1* func = new TF1("func","sin(x)");
+  Double_t thetaOffset = TMath::ATan2( InitPos.X() -X ,InitPos.Z() - Z);
+  Double_t c = this->DY/this->DTheta;
+  Double_t yOff = InitPos.Y();
+  TF1* func = new TF1("func","[0]*sin([1]*x+[2])+[3]");
+  func->SetParameter(0,this->R);
+  func->SetParameter(1,1./c);
+  func->SetParameter(2,thetaOffset-yOff/c);
+  func->SetParameter(3,yOff);
   return func;
+}
+ClassImp(HTrack)
+HTrack::HTrack():ID(-1),R(0),DYDL(0),DYDT(0),Length(0),DepE(0){
+  Momentum = TVector3(0,0,0);
+}
+HTrack::HTrack(const HTrack& right){
+  ID = right.ID;
+  R  = right.R;
+  DYDL=right.DYDL;
+  DYDT=right.DYDT;
+  Length=right.Length;
+  DepE=right.DepE;
+  Momentum = right.Momentum;
+}
+HTrack::~HTrack(){
+  ;
 }
 
 ClassImp(HLine)

@@ -8,6 +8,8 @@
 #include "TPolyLine3D.h"
 #include "TMath.h"
 #include "TF1.h"
+#include "TGraph.h"
+#include "TGraph2D.h"
 #include <iostream>
 
 class HCircle : public TObject {
@@ -39,6 +41,9 @@ class HSprial : public TObject {
   Double_t Y;
   Double_t Z;
   Double_t R;
+  Double_t EX;
+  Double_t EZ;
+  Double_t ER;
   Double_t DTheta;
   Double_t DY;
   Int_t    RL;
@@ -56,11 +61,31 @@ class HSprial : public TObject {
   TPolyLine*   GenerateArc();
   TF1*         GenerateXY();
   TF1*         GenerateZY();
+
+  void         CalculateDist(TVector3 hitpos, Double_t& dR, Double_t& dY);
+  void         CalculateDist(TGraph2D* grTrack, Double_t& dR, Double_t& dY);
   //virtual void DrawXY();
   //virtual void DrawYZ();
   //virtual void DrawZX();
  public:
   ClassDef( HSprial, 1 )
+};
+
+class HTrack : public TObject {
+ public:
+  HTrack();
+  HTrack(const HTrack& right);
+  ~HTrack();
+  Int_t     ID;
+  TGraph2D  track;
+  TVector3  Momentum;
+  Double_t  R;
+  Double_t  DYDL;
+  Double_t  DYDT;
+  Double_t  Length;
+  Double_t  DepE;
+ public:
+  ClassDef( HTrack, 1)
 };
 
 class HLine : public TObject {

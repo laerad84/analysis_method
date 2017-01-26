@@ -78,6 +78,7 @@
 #include "GsimData/GsimDigiData.h"
 #include "GsimData/GsimTimeData.h"
 #include "GsimData/GsimTrackData.h"
+#include <iostream>
 
 #include "Data.h"
 #include "TPCData.h"
@@ -99,5 +100,5 @@ class GenFitter {
   genfit::MeasurementProducer<genfit::mySpacepointDetectorHit, genfit::mySpacepointMeasurement> *myProducer;
   TClonesArray* myDetectorHitArray;//("genfit::mySpacepointDetectorHit");
 
-  ClassDef( GenFitter, 0 )
+  ClassDef( GenFitter, 1 )
 };

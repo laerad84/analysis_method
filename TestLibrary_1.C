@@ -170,7 +170,9 @@ void TestLibrary_1(){
     std::vector<TPolyLine3D*> HelixArr;
     std::vector<TPolyLine*>   ArcArr;
 
+    std::cout<< "SubCluster" << std::endl;
     for( Int_t arrIndex = 0; arrIndex < RootIDList.size(); arrIndex++){
+      std::cout<< "arrIndex " << arrIndex << std::endl;
       TClonesArray* subClArr = new TClonesArray("TPCCluster");
       Bool_t bResult = ClusterBlocker( ClArr, subClArr,RootIDList, RootIDList.at(arrIndex));
       if( !bResult){ continue; }
@@ -312,14 +314,23 @@ void TestLibrary_1(){
 
 
 	///Genfit tester ///
+	std::cout << "Calculate Momentum " << std::endl;
+	sprial.Print();
 
+	/*
 	Double_t AbsoluteMomentum = CalculateMomentum( sprial, 1.);
 	TVector3 tangentialVec(0,0,0);
+	std::cout<< "Test" << std::endl;
 	CalculateCircleTangent(sprial,((TPCCluster*)(subClArr->At(firstIndex)))->Position,tangentialVec);
+	std::cout<< "Test" << std::endl;
+
 	TVector3 circleTangent(tangentialVec.X(),
 			       sprial.DY/(sprial.R*sprial.DTheta),
 			       tangentialVec.Z());
+	std::cout<< "Test" << std::endl;
 	TVector3 direction = circleTangent.Unit();
+	std::cout<< "Test" << std::endl;
+
 	TVector3 momentum = AbsoluteMomentum*direction;
 	sprial.InitMom = momentum;
 	TVector3 MomentumFit(0,0,0);
@@ -336,7 +347,7 @@ void TestLibrary_1(){
 	momentum.Print();
 	MomentumFit.Print();
 	hisMag->Fill(momentum.Mag(), MomentumFit.Mag()/momentum.Mag());
-
+	*/
 	SprialArr.push_back(sprial);
 	HelixArr.push_back(sprial.GenerateHelix());
 	ArcArr.push_back(sprial.GenerateArc());
@@ -344,9 +355,6 @@ void TestLibrary_1(){
       }
       nCand++;
     }
-
-
-
 
     for( int iHelix = 0; iHelix < nHelix; iHelix++){
       ArcArr.at(iHelix).SetLineColor( iHelix%7 +1);
@@ -372,7 +380,6 @@ void TestLibrary_1(){
     }
 
 
-
     can->cd(3);
     hisBox->Draw();
     total->Draw("P");
@@ -389,6 +396,8 @@ void TestLibrary_1(){
       delete arc;
       delete line;
     }
+
+
 
     //can->cd(2)->Clear();
   }

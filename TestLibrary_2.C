@@ -1,3 +1,8 @@
+// TestLibrary_2 : Conversion test script for padhit to cluster and track (circle fit)
+//
+//
+//
+
 #include "TVirtualFitter.h"
 
 const double pimass = 139.57018;//MeV
@@ -65,21 +70,22 @@ void TestLibrary_2(){/// reconstruction ///
     gSystem->Load("~/work/E42_ana/analysis_method/lib/libanalysis_method.so");
     gSystem->Load("~/local/hep/E42/E42/lib/so/libGsimData.dylib");
   }
+  std::string itrName = "convTree";
+  std::string otrName = "anaTree";
+  std::string itfName = "Proton_conv.root";
+  std::string otfName = itfName.substr(0, itfName.rfind(".")) +"ana.root";
 
-  //GenFitter* fitter = new GenFitter("Data/TPC.root");
-  //TVirtualFitter::SetDefaultFitter("Minuit");
   grTrackSample = new TGraph2D();
-  //fitter->SetField("~/local/hep/E42/E42/data/field/SC_FieldMap.root",TVector3(0,0,0),TVector3(0,0,0));
   //TFile* itf = new TFile("HDE42_conv.root");
   //TTree* itr = (TTree*)itf->Get("convTree");
   //TFile* itf = new TFile("TestHit.root");
   //TTree* itr = (TTree*)itf->Get("padHit");
 
-  TChain* itr = new TChain("convTree");
+  TChain* itr = new TChain(itrName.c_str());
   //itr->Add("MCData/HDE42_conv_*.root");
   //itr->Add("HD_0_conv.root");
-  itr->Add("lambda_Aconv.root");
-  //itr->Add("Proton_conv.root");
+  //itr->Add("lambda_Aconv.root");
+  itr->Add(itfName.c_str());
   TClonesArray* HitArr = new TClonesArray("TPCPadHit");
   GsimGenParticleData*   particle = new GsimGenParticleData();
 
@@ -95,24 +101,27 @@ void TestLibrary_2(){/// reconstruction ///
   */
   itr->SetBranchAddress("HitArr",&HitArr);
   itr->SetBranchAddress("GenParticle.",&particle);
-  //itr->SetBranchAddress("TPC.",&tpcData);
   /*
+  itr->SetBranchAddress("TPC.",&tpcData);
   itr->SetBranchAddress("FTOF.",&ftofData);
   itr->SetBranchAddress("DC1.",&DC1Data);
   itr->SetBranchAddress("DC2.",&DC2Data);
   itr->SetBranchAddress("DC3.",&DC3Data);
   itr->SetBranchAddress("NBAR.",&NBARData);
   */
-  TFile* otf = new TFile("TestFit_Alambda.root","recreate");
-  TTree* otr = new TTree("anaTree","Test");
+
+  TFile* otf = new TFile(otfName.c_str(),"recreate");
+  TTree* otr = new TTree(otrName.c_str(),"Test");
   TClonesArray* pSprialArr = new TClonesArray("HSprial");
   TClonesArray* mSprialArr = new TClonesArray("HSprial");
   TClonesArray* pMomentumArr = new TClonesArray("TLorentzVector");
   TClonesArray* mMomentumArr = new TClonesArray("TLorentzVector");
   TClonesArray* lMomentumArr = new TClonesArray("TLorentzVector");
   TClonesArray* PositionArr  = new TClonesArray("TVector3");
+  TClonesArray* TrackArr     = new TClonesArray("TGraph2D");
   TClonesArray* ClArr = new TClonesArray("TPCCluster");
   Int_t         EventNumber;
+  Int_t         nCluster;
   Int_t         nPTrack;
   Int_t         nMTrack;
   Int_t         nLambda;
@@ -121,6 +130,34 @@ void TestLibrary_2(){/// reconstruction ///
   TVector3      piMom;
   TVector3      lMom;
   TVector3      lPos;
+  Int_t         Abort;
+
+  const Int_t maxNBlock = 50;
+  const Int_t maxNTrackCand    = 50;
+  TGraph2D* grEvent3D = new TGraph2D();
+  TGraph*   grEventYX = new TGraph();
+  TGraph*   grEventYZ = new TGraph();
+  TGraph*   grEventZX = new TGraph();
+  grEvent3D->SetMarkerStyle(20);
+  grEventYX->SetMarkerStyle(21);
+  grEventYZ->SetMarkerStyle(22);
+  grEventZX->SetMarkerStyle(23);
+  grEvent3D->SetNameTitle("grEvent3D","X:Y:Z");
+  grEventYX->SetNameTitle("grEventYX","Y:X");
+  grEventYZ->SetNameTitle("grEventYZ","Y:Z");
+  grEventZX->SetNameTitle("grEventZX","Z:X");
+
+  TGraph*   grtrack[maxNBlock];
+  TGraph2D* grtrack3D[maxNBlock];
+  for( int i = 0; i< maxNBlock; i++){
+    grtrack[i] = new TGraph();
+    grtrack[i]->SetMarkerStyle( 20+ i%8 );
+    grtrack[i]->SetMarkerColor( i/7 +1 );
+    grtrack3D[i] = new TGraph2D();
+    grtrack3D[i]->SetMarkerStyle( 20+ i%8 );
+    grtrack3D[i]->SetMarkerColor( i/7 +1 );
+  }
+
   //otr->Branch("GenParticle.",&particle,25600,99);
   otr->Branch("HitArr",&HitArr,25600,99);
   otr->Branch("pSprialArr",&pSprialArr,25600,99);
@@ -140,42 +177,40 @@ void TestLibrary_2(){/// reconstruction ///
   otr->Branch("piMom",&piMom);
   otr->Branch("nLambda",&nLambda,"nLambda/I");
   otr->Branch("Distance",Distance,"Distance[nLambda]/D");
-
-
+  otr->Branch("Abort",&Abort,"Abort/I");
+  otr->Branch("TrackArr",&TrackArr,256000,99);
+  otr->Branch("grEvent3D",&grEvent3D,25600,99);
+  otr->Branch("grEventYX",&grEventYX,25600,99);
+  otr->Branch("grEventYZ",&grEventYZ,25600,99);
   TH1D* hislMass = new TH1D("hislMass","hislMass",3000,500,3500);
-  TH2D* hisClusterSizeEne  = new TH2D("hisClustersizeEne","hisCLustersizeEne",30,0,30,100,0,1000);
+  TH2D* hisClusterSizeEne  = new TH2D("hisClustersizeEne","hisClustersizeEne",
+				      30,0,30,100,0,1000);
   TH1D* hisDist = new TH1D("hisDist","hisDist",400,0,400);
   TH2D* hisCross= new TH2D("hisCross","hisCross",300,-300,300,300,-300,300);
   TH3D* hisBox = new TH3D("hisBox","hisBox;X;Y;Z",30,-300,300,30,-300,300,30,-300,300);
   TH2D* hisMag = new TH2D("hisMag","hisMag",100,0,2000,100,0.5,1.5);
   TCanvas* can = new TCanvas("can","can",1200,1200);
-  //TCanvas* can = new TCanvas("can","can",1200,600);
-  //can->Divide(2,1);
-  //can->cd(1);
-  //gPad->DrawFrame(-300,-300,300,300);
-  //can->cd(2);
+
   can->Divide(2,2);
   can->cd(1);
-  gPad->DrawFrame(-300,-300,300,300);
+  hisBox->Draw();
   can->cd(2);
-  hisBox->Draw();
+  gPad->DrawFrame(-300,-300,300,300);
   can->cd(3);
-  hisBox->Draw();
-  //TFile* otf = new TFile("Output.root","recreate");
+  gPad->DrawFrame(-300,-300,300,300);
+  can->cd(4);
+  gPad->DrawFrame(-300,-300,300,300);
 
-  const Int_t maxNBlock = 50;
-  const Int_t maxNTrackCand    = 50;
-  TGraph* grCandidates[maxNBlock];
-  for( int i = 0; i< maxNBlock; i++){
-    grCandidates[i] = new TGraph();
-    grCandidates[i]->SetMarkerStyle( 20+i%8);
-    grCandidates[i]->SetMarkerColor( i/7 +1);
-  }
 
   pMom  = TVector3(0,0,0);
   piMom = TVector3(0,0,0);
   lMom  = TVector3(0,0,0);
   lPos  = TVector3(0,0,0);
+
+  //######################################################################################
+  //######################################################################################
+  //######################################################################################
+  //######################################################################################
 
   for( int ievt = 0; ievt <itr->GetEntries() ;ievt++){
   //for( int ievt = 0; ievt < 1000;ievt++){
@@ -184,9 +219,20 @@ void TestLibrary_2(){/// reconstruction ///
     std::cout<< "EventNumber : " << ievt << std::endl;
     std::cout<< "*************************************************"<< std::endl;
     EventNumber = ievt;
+    Int_t nCand = 0;
+    Int_t nHelix = 0;
+    pSprialArr->Clear();
+    mSprialArr->Clear();
+    pMomentumArr->Clear();
+    mMomentumArr->Clear();
+    lMomentumArr->Clear();
+    PositionArr->Clear();
     ClArr->Clear();
+    TrackArr->Clear();
     itr->GetEntry( ievt );
 
+
+    /// Extract MC data ///
     Int_t iLambdaTrack=-1;
     TClonesArray* trackArr = particle->briefTracks;
     for( int itrack = 0; itrack < trackArr->GetEntries(); itrack++){
@@ -208,19 +254,20 @@ void TestLibrary_2(){/// reconstruction ///
       }
     }
 
-
-    TPolyMarker3D* total = new TPolyMarker3D();
-    total->SetMarkerStyle(20);
-    TPolyMarker3D* track[maxNBlock];
-    for( int i = 0; i< maxNBlock; i++){
-      track[i] = new TPolyMarker3D();
-      track[i]->SetMarkerStyle( 20+ i%8 );
-      track[i]->SetMarkerColor( i/7 +1 );
-    }
     std::cout<< "Clustering" << std::endl;
+
+    grEvent3D->Set(0);
+    grEventYX->Set(0);
+    grEventYZ->Set(0);
+    grEventZX->Set(0);
     for( int igr =0; igr < maxNBlock; igr++){
-      grCandidates[igr]->Set(0);
+      grtrack[igr]->Set(0);
+      grtrack3D[igr]->Set(0);
     }
+
+    //////////////////////////////////////////////////////////////////////
+    /// Clustering ///
+    //////////////////////////////////////////////////////////////////////
 
     Bool_t bCluster = HitClustering( HitArr, ClArr );
     if( !bCluster ){
@@ -235,59 +282,42 @@ void TestLibrary_2(){/// reconstruction ///
       std::cout<< "*************************" << std::endl;
       continue;
     }
-
     std::cout<< "ClArr : " << ClArr->GetEntries() << std::endl;
-
     for( int i = 0; i < ClArr->GetEntries(); i++){
       TPCCluster* cl = (TPCCluster*)(ClArr->At(i));
-      hisClusterSizeEne->Fill(cl->NHit, cl->Energy);
-      //cl->Print();
-      /*
-      std::cout<< i <<"\t" <<  cl->ID << "\t"
-	       << cl->MotherID.size() << "\t" << cl->DaughterID.size() << "\t"
-	       << cl->Mother          << "\t" << cl->Daughter << "\t"
-	       << std::endl;
-      */
-      total->SetNextPoint( cl->Position.X(), cl->Position.Y(), cl->Position.Z());
+      grEvent3D->SetPoint(i, cl->Position.X(), cl->Position.Y(), cl->Position.Z());
+      grEventYX->SetPoint(i, cl->Position.Y(), cl->Position.X());
+      grEventYZ->SetPoint(i, cl->Position.Y(), cl->Position.Z());
+      grEventZX->SetPoint(i, cl->Position.Z(), cl->Position.X());
     }
+    nCluster = ClArr->GetEntries();
 
+    //////////////////////////////////////////////////////////////////////
+    /// Clustering ///
+    //////////////////////////////////////////////////////////////////////
 
     //std::cout<< "GetList " << std::endl;
     std::vector<Int_t> RootIDList = GetListOfTrackRoot( ClArr );
     //std::cout<<"Root ID list size : " << RootIDList.size() << std::endl;
     if( RootIDList.size() > maxNBlock ){ std::cout << "too many blocks " << std::endl; }
-    Int_t nCand = 0;
-    Int_t nHelix = 0;
-    pSprialArr->Clear();
-    mSprialArr->Clear();
-    pMomentumArr->Clear();
-    mMomentumArr->Clear();
-    lMomentumArr->Clear();
 
     std::vector<TPolyLine3D*> HelixArr;
     std::vector<TPolyLine*>   ArcArr;
 
     Int_t nPsp = 0;
     Int_t nMsp = 0;
-    Int_t nMTrack = 0;
-    Int_t nPTrack = 0;
     for( Int_t arrIndex = 0; arrIndex < RootIDList.size(); arrIndex++){
       TClonesArray* subClArr = new TClonesArray("TPCCluster");
       Bool_t bResult = ClusterBlocker( ClArr, subClArr,RootIDList, RootIDList.at(arrIndex));
       if( !bResult){ continue; }
+      TGraph2D* gTrack = new TGraph2D();
       for( Int_t index = 0; index < subClArr->GetEntries(); index++){
 	TPCCluster* subCl = (TPCCluster*)subClArr->At(index);
-	/*
-	std::cout<< subCl->Mother       << "\t" << subCl->ID << "\t" << subCl->Daughter << "\t"
-		 << subCl->nMother      << "\t" << subCl->nDaughter << "\t"
-		 << subCl->Row          << "\t" << subCl->Col << "\t"
-		 << subCl->Position.X() << "\t" << subCl->Position.Z() << "\t"
-		 << std::endl;
-	*/
-	grCandidates[nCand]->SetPoint( index, subCl->Position.Z(), subCl->Position.X());
-	track[nCand]->SetNextPoint(subCl->Position.X(), subCl->Position.Y(), subCl->Position.Z());
+	gTrack->SetPoint( index, subCl->Position.X(), subCl->Position.Y(), subCl->Position.Z());
+	grtrack[nCand]->SetPoint( index, subCl->Position.Z(), subCl->Position.X());
+	grtrack3D[nCand]->SetPoint(index, subCl->Position.X(), subCl->Position.Y(), subCl->Position.Z());
       }
-
+      new((*TrackArr)[arrIndex]) TGraph2D(*gTrack);
       if( subClArr->GetEntries() >= 4 ){
 	grTrackSample->Set(0);
 	for( Int_t ip = 0; ip < subClArr->GetEntries(); ip++){
@@ -307,30 +337,7 @@ void TestLibrary_2(){/// reconstruction ///
 	HSprial sprial = GenerateSprial(((TPCCluster*)(subClArr->At(firstIndex)))->Position,
 					((TPCCluster*)(subClArr->At(middleIndex)))->Position,
 					((TPCCluster*)(subClArr->At(finalIndex)))->Position);
-	/*
-	TVirtualFitter::SetDefaultFitter("Minuit");
-	TVirtualFitter *mfitter = TVirtualFitter::Fitter(0,5);
-	mfitter->SetFCN(HelixFunc);
-	std::cout<< "test" << std::endl;
-	mfitter->SetParameter(0,"X", sprial.X, 20, 0,0 );
-	Double_t InitTheta= TMath::ATan2( sprial.InitPos.X() - sprial.X, sprial.InitPos.Z() - sprial.Z );
-	mfitter->SetParameter(1,"Y", sprial.InitPos.Y() - InitTheta*sprial.DY/sprial.DTheta, 10, 0,0);
-	mfitter->SetParameter(2,"Z", sprial.Z, 20, 0, 0);
-	mfitter->SetParameter(3,"R", sprial.R, 20, 0, 0);
-	mfitter->SetParameter(4,"DYDT", sprial.DY/sprial.DTheta, 20, 0, 0);
-	std::cout<< "test" << std::endl;
-	Double_t arglist[1] = {0};
-	mfitter->ExecuteCommand("MIGRAD",arglist, 0 );
-	std::cout<< nHelix << "\t"
-		 << mfitter->GetParameter(0) << "\t"
-		 << mfitter->GetParameter(1) << "\t"
-		 << mfitter->GetParameter(2) << "\t"
-		 << mfitter->GetParameter(3) << "\t"
-		 << mfitter->GetParameter(4) << "\t"
-		 << std::endl;
-	*/
-
-
+	sprial.ID = arrIndex;
 
 	TVirtualFitter::SetDefaultFitter("Minuit");
 	TVirtualFitter *circleFitter = TVirtualFitter::Fitter(0,3);
@@ -346,14 +353,20 @@ void TestLibrary_2(){/// reconstruction ///
 	std::cout<< sprial.X << "\t" << circleFitter->GetParameter(0) << std::endl;
 	std::cout<< sprial.Z << "\t" << circleFitter->GetParameter(1) << std::endl;
 	std::cout<< "**************************************" << std::endl;
+
+	std::cout<< "Set Data " << std::endl;
 	sprial.X = circleFitter->GetParameter(0);
 	sprial.Z = circleFitter->GetParameter(1);
 	sprial.R = circleFitter->GetParameter(2);
-
-
+	sprial.EX = circleFitter->GetParError(0);
+	sprial.EZ = circleFitter->GetParError(1);
+	sprial.ER = circleFitter->GetParError(2);
+	std::cout<< "Calculate Momentum" << std::endl;
 	Double_t AbsoluteMomentum = CalculateMomentum( sprial, 1.);
+	std::cout<< "AbsoluteMomentum : " << AbsoluteMomentum << std::endl;
 	TVector3 tangentialVec(0,0,0);
 	CalculateCircleTangent(sprial,((TPCCluster*)(subClArr->At(firstIndex)))->Position,tangentialVec);
+	tangentialVec.Print();
 	TVector3 circleTangent(tangentialVec.X(),
 			       sprial.DY/(sprial.R*sprial.DTheta),
 			       tangentialVec.Z());
@@ -407,7 +420,7 @@ void TestLibrary_2(){/// reconstruction ///
     nMTrack = mSprialArr->GetEntries();
     nPTrack = pSprialArr->GetEntries();
 
-
+    std::cout<< "Track Fit " << std::endl;
     if( pSprialArr->GetEntries() >= 0 &&
 	pSprialArr->GetEntries() < 5 &&
 	mSprialArr->GetEntries() >= 0 &&
@@ -472,11 +485,28 @@ void TestLibrary_2(){/// reconstruction ///
 	}
       }
     }
-    otr->Fill();
+    /*
+    if( nPTrack > 1 ){
+      can->cd(1);
+      grEvent3D->Draw("AP");
+      can->cd(2);
+      grEventYX->Draw("P");
+      can->cd(3);
+      grEventYZ->Draw("P");
+      can->cd(4);
 
+      grEventZX->Draw("P");
+      can->Update();
+      can->Modified();
+      gSystem->ProcessEvents();
+      std::cout<< nCluster << std::endl;
+      getchar();
+    }
+    */
+    //if( nPTrack > 1 )
+    otr->Fill();
   }
-  can->cd(4);
-  hislMass->Draw();
+
   otf->cd();
   otr->Write();
   otf->Close();

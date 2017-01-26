@@ -6,6 +6,7 @@
 #pragma link C++ class HCircle++;
 #pragma link C++ class HSprial++;
 #pragma link C++ class HLine++;
+#pragma link C++ class HTrack++;
 #pragma link C++ class TPCHit++;
 #pragma link C++ class TempCluster++;
 #pragma link C++ class TPCCluster++;

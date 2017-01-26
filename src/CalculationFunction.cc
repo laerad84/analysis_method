@@ -261,14 +261,17 @@ Bool_t CalculateCrossing( HSprial sprial0, HSprial sprial1, Double_t& dist, TVec
   return true;
 }
 double CalculateMomentumR( HSprial sprial, double dtesla){
+  std::cout<< __PRETTY_FUNCTION__ << std::endl;
   return sprial.R * dtesla / 3.36;
 }
 double CalculateMomentumY( HSprial sprial, double dtesla){
+  std::cout<< __PRETTY_FUNCTION__ << std::endl;
   double momentumR = CalculateMomentumR( sprial, dtesla );
   return momentumR * sprial.DY / TMath::Abs( sprial.R * sprial.DTheta );
 }
 
 double CalculateMomentum( HSprial sprial, double dtesla ){
+  std::cout<< __PRETTY_FUNCTION__ << std::endl;
   double pR = CalculateMomentumR( sprial, dtesla );
   double pY = CalculateMomentumY( sprial, dtesla );
   double totalMomentum = TMath::Sqrt( pR*pR + pY*pY );
