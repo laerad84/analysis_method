@@ -9,6 +9,12 @@
 #include "TVirtualFitter.h"
 #include <vector>
 #include <list>
+#include <string>
+#include "TGraph.h"
+#include "TGraph2D.h"
+#include "GsimData/GsimTrackData.h"
+#include "GsimData/GsimGenParticleData.h"
+
 const double pimass = 139.57018;//MeV
 const double pmass  = 938.272046;//MeV
 const double kpmass = 493.667;//MeV
@@ -50,13 +56,17 @@ int main( int argc, char** argv){
     gSystem->Load("~/local/hep/E42/E42/lib/so/libGsimData.dylib");
   }
   */
-  TFile* itf = new TFile("Proton_trk.root");
+  std::string ifilename = argv[1];
+  std::string ofilename = ifilename.substr(0,ifilename.rfind("."))+"_ana.root";
+  TFile* itf = new TFile(ifilename.c_str());
   TTree* itr = (TTree*)itf->Get("convTree");
 
+  GsimGenParticleData*   particle = new GsimGenParticleData();
   TClonesArray* TrkArr = new TClonesArray("TGraph2D");
   itr->SetBranchAddress("TrkArr",&TrkArr);
+  itr->SetBranchAddress("GenParticle.",&particle);
 
-  TFile* otf = new TFile("TestDist.root","recreate");
+  TFile* otf = new TFile(ofilename.c_str(),"recreate");
   TTree* otr = new TTree("Output","");
   Int_t    nComb;
   Int_t    nTrk;
@@ -65,18 +75,36 @@ int main( int argc, char** argv){
   Int_t    nMerged;
   Int_t    nTrackBefore;
   Int_t    nTrackAfter;
+  //Double_t      Distance[100];
+
+  Int_t         nCluster;
+  Int_t         nPTrack;
+  Int_t         nMTrack;
+  Int_t         nLambda;
+  TVector3      pMom;
+  TVector3      piMom;
+  TVector3      lMom;
+  TVector3      lPos;
+  Int_t         Abort;
+
   TClonesArray* MergedTrkArr = new TClonesArray("TGraph2D");
   TClonesArray* MergedSprialArr= new TClonesArray("HSprial");
   otr->Branch("nComb",&nComb,"nComb/I");
   otr->Branch("nTrk",&nTrk,"nTrk/I");
   otr->Branch("dY",dY,"dY[nComb]/D");
   otr->Branch("dR",dR,"dR[nComb]/D");
-  otr->Branch("nMerged");
+  otr->Branch("nMerged",&nMerged,"nMerged/I");
   otr->Branch("MergedTrkArr",&MergedTrkArr,256000,99);
   otr->Branch("MergedSprialArr",&MergedSprialArr,256000,99);
-
   otr->Branch("nTrackBefore",&nTrackBefore,"nTrackBefore/I");
   otr->Branch("nTrackAfter",&nTrackAfter,"nTrackAfter/I");
+  otr->Branch("lMom",&lMom);
+  otr->Branch("lPos",&lPos);
+  otr->Branch("pMom",&pMom);
+  otr->Branch("piMom",&piMom);
+  //otr->Branch("nLambda",&nLambda,"nLambda/I");
+  //otr->Branch("Distance",Distance,"Distance[nLambda]/D");
+  otr->Branch("Abort",&Abort,"Abort/I");
 
   TGraph* grX[20];
   for( int i = 0; i< 20; i++ ){
@@ -95,6 +123,7 @@ int main( int argc, char** argv){
 
   for( int ievt = 0; ievt < itr->GetEntries(); ievt++){
   //for( int ievt = 0; ievt < 100; ievt++){
+    std::cout<< ievt << std::endl;
     itr->GetEntry(ievt);
     std::cout<< ievt << std::endl;
     for( int i = 0; i< 20; i++){
@@ -104,6 +133,28 @@ int main( int argc, char** argv){
     MergedSprialArr->Clear();
 
     if( TrkArr->GetEntries() > 20 ){ continue; }
+
+    Int_t iLambdaTrack=-1;
+    TClonesArray* trackArr = particle->briefTracks;
+    for( int itrack = 0; itrack < trackArr->GetEntries(); itrack++){
+      GsimTrackData* gsimtrack  = (GsimTrackData*)trackArr->At(itrack);
+      if( gsimtrack->mother == -1 && gsimtrack->pid == 3122){
+	iLambdaTrack = gsimtrack->track;
+	lMom.SetXYZ(gsimtrack->p.X(),gsimtrack->p.Y(),gsimtrack->p.Z());
+	lPos.SetXYZ(gsimtrack->end_v.X(),gsimtrack->end_v.Y(),gsimtrack->end_v.Z());
+      }
+    }
+    for( int itrack = 0; itrack < trackArr->GetEntries(); itrack++){
+      GsimTrackData* gsimtrack  = (GsimTrackData*)trackArr->At(itrack);
+      if( gsimtrack->mother == iLambdaTrack){
+	if ( gsimtrack->pid == 2212){
+	  pMom.SetXYZ(gsimtrack->p.X(),gsimtrack->p.Y(),gsimtrack->p.Z());
+	}else if( gsimtrack->pid == -211 ){
+	  piMom.SetXYZ(gsimtrack->p.X(),gsimtrack->p.Y(),gsimtrack->p.Z());
+	}
+      }
+    }
+
     nTrk = TrkArr->GetEntries();
     TClonesArray* sprialArr = new TClonesArray("HSprial");
     TClonesArray* TrackArr = new TClonesArray("TGraph2D");
@@ -121,6 +172,7 @@ int main( int argc, char** argv){
 	grX[itrk]->SetPoint( ip, itrack->GetZ()[ip],itrack->GetX()[ip]);
 	//grTrackSample->SetPoint( ip, itrack->GetZ()[ip],itrack->GetX()[ip]);
       }
+
       std::cout << "Index " << std::endl;
       Int_t Index[3]={0,(int)((itrack->GetN()-1)/2),itrack->GetN() -1};
       TVector3 vec[3];
@@ -150,6 +202,7 @@ int main( int argc, char** argv){
       new((*TrackArr)[nSizeTrack]) TGraph2D(*itrack);
       nSizeTrack++;
     }
+
     std::cout<< "Combine Tracks" << std::endl;
     std::cout<< ievt << "\t" << TrkArr->GetEntries() <<"\t" << TrackArr->GetEntries() << std::endl;
     nComb = 0;
@@ -213,20 +266,63 @@ int main( int argc, char** argv){
     std::cout<< "//////////////////////////////////////////////////" << std::endl;
     std::cout<< "Cluster Size : " << clusterArr.size() << std::endl;
     std::cout<< "//////////////////////////////////////////////////" << std::endl;
-
+    //if( clusterArr.size() >1 ){ continue; }
+    nMerged = 0;
     for( std::vector<std::vector<int> >::iterator i = clusterArr.begin();
 	 i  != clusterArr.end();
 	 i++ ){
       std::cout<< "Cluster" << std::endl;
+      TGraph2D* Track = new TGraph2D();
       for( std::vector<int>::iterator j = (*i).begin();
 	   j != (*i).end();
 	   j++){
-	std::cout<< *j << "\t";
+
+	TGraph2D* track = (TGraph2D*)(TrackArr->At((*j)));
+	Int_t index = Track->GetN();
+	for( int ip = 0; ip < track->GetN(); ip++){
+	  Track->SetPoint(Track->GetN(), track->GetX()[ip],track->GetY()[ip],track->GetZ()[ip]);
+	}
+	std::cout<< *j << "\t" <<  Track->GetN() << std::endl;
       }
-      std::cout<< std::endl;
+      grTrackSample = Track;
+      Int_t Index[3]={0,(int)((Track->GetN()-1)/2),Track->GetN() -1};
+      TVector3 vec[3];
+      for( int ip = 0; ip< 3; ip++){
+	vec[ip].SetXYZ(Track->GetX()[Index[ip]],
+		       Track->GetY()[Index[ip]],
+		       Track->GetZ()[Index[ip]]);
+      }
+      std::cout<< "Sprial" << std::endl;
+      HSprial sprial = GenerateSprial(vec[0],vec[1],vec[2]);
+      Track->SetUniqueID(nMerged);
+      sprial.ID = nMerged;
+      circleFitter->SetParameter(0,"X", sprial.X, 10, sprial.X-50, sprial.X+50 );
+      circleFitter->SetParameter(1,"Z", sprial.Z, 10, sprial.Z-50, sprial.Z+50);
+      circleFitter->SetParameter(2,"R", sprial.R, 10, sprial.R-50, sprial.R+50);
+      Double_t arglist[1] = {0};
+      circleFitter->ExecuteCommand("MIGRAD",arglist, 0 );
+      sprial.X = circleFitter->GetParameter(0);
+      sprial.Z = circleFitter->GetParameter(1);
+      sprial.R = circleFitter->GetParameter(2);
+      sprial.EX = circleFitter->GetParError(0);
+      sprial.EZ = circleFitter->GetParError(1);
+      sprial.ER = circleFitter->GetParError(2);
+      sprial.InitPos = TVector3(Track->GetX()[0],Track->GetY()[0],Track->GetZ()[0]);
+      sprial.FinalPos= TVector3(Track->GetX()[Index[2]],Track->GetY()[Index[2]],Track->GetZ()[Index[2]]);
+      std::cout << "Set Data " << std::endl;
+      new((*MergedSprialArr)[nMerged]) HSprial(sprial);
+      new((*MergedTrkArr)[nMerged]) TGraph2D(*Track);
+
+      nMerged++;
+      std::cout<< "End" << std::endl;
+      std::cout<< clusterArr.size() << std::endl;
     }
+    std::cout<< "Test" << std::endl;
+
     //getchar();
     otr->Fill();
+
+    std::cout<<  "Fill" << std::endl;
   }
   otr->Write();
   otf->Close();
