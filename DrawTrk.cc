@@ -8,6 +8,7 @@
 #include "TSystem.h"
 #include "TVirtualFitter.h"
 #include <vector>
+#include <list>
 const double pimass = 139.57018;//MeV
 const double pmass  = 938.272046;//MeV
 const double kpmass = 493.667;//MeV
@@ -36,7 +37,7 @@ void HelixCircle( Int_t &, Double_t *, Double_t &f, Double_t *par, Int_t ){
   }
 }
 
-int main( int argc, char** argv ){
+int main( int argc, char** argv){
 //void DrawTrk(){
   /*
   TString mSystemName = gSystem->GetFromPipe("uname");
@@ -62,6 +63,8 @@ int main( int argc, char** argv ){
   Double_t dY[400];
   Double_t dR[400];
   Int_t    nMerged;
+  Int_t    nTrackBefore;
+  Int_t    nTrackAfter;
   TClonesArray* MergedTrkArr = new TClonesArray("TGraph2D");
   TClonesArray* MergedSprialArr= new TClonesArray("HSprial");
   otr->Branch("nComb",&nComb,"nComb/I");
@@ -71,6 +74,10 @@ int main( int argc, char** argv ){
   otr->Branch("nMerged");
   otr->Branch("MergedTrkArr",&MergedTrkArr,256000,99);
   otr->Branch("MergedSprialArr",&MergedSprialArr,256000,99);
+
+  otr->Branch("nTrackBefore",&nTrackBefore,"nTrackBefore/I");
+  otr->Branch("nTrackAfter",&nTrackAfter,"nTrackAfter/I");
+
   TGraph* grX[20];
   for( int i = 0; i< 20; i++ ){
     grX[i] = new TGraph();
@@ -99,11 +106,17 @@ int main( int argc, char** argv ){
     if( TrkArr->GetEntries() > 20 ){ continue; }
     nTrk = TrkArr->GetEntries();
     TClonesArray* sprialArr = new TClonesArray("HSprial");
+    TClonesArray* TrackArr = new TClonesArray("TGraph2D");
     std::cout<< "trk" << std::endl;
+    Int_t nSizeTrack = 0;
     for( int itrk = 0; itrk < TrkArr->GetEntries(); itrk++){
       std::cout<<"itrk "<<  itrk << std::endl;
       TGraph2D* itrack = (TGraph2D*)TrkArr->At(itrk);
       grTrackSample = itrack;
+      if( itrack->GetN() < 5){
+	continue;
+      }
+
       for( int ip = 0; ip < itrack->GetN(); ip++){
 	grX[itrk]->SetPoint( ip, itrack->GetZ()[ip],itrack->GetX()[ip]);
 	//grTrackSample->SetPoint( ip, itrack->GetZ()[ip],itrack->GetX()[ip]);
@@ -133,93 +146,86 @@ int main( int argc, char** argv ){
       sprial.ER = circleFitter->GetParError(2);
       sprial.InitPos = TVector3(itrack->GetX()[0],itrack->GetY()[0],itrack->GetZ()[0]);
       sprial.FinalPos= TVector3(itrack->GetX()[Index[2]],itrack->GetY()[Index[2]],itrack->GetZ()[Index[2]]);
-      new((*sprialArr)[itrk]) HSprial(sprial);
+      new((*sprialArr)[nSizeTrack]) HSprial(sprial);
+      new((*TrackArr)[nSizeTrack]) TGraph2D(*itrack);
+      nSizeTrack++;
     }
     std::cout<< "Combine Tracks" << std::endl;
-    std::cout<< ievt << "\t" << TrkArr->GetEntries() << std::endl;
+    std::cout<< ievt << "\t" << TrkArr->GetEntries() <<"\t" << TrackArr->GetEntries() << std::endl;
     nComb = 0;
 
-    std::vector<int> MergedIndexArr;
+
+    std::list<int> tmpIDList;
+    std::list<int> tmpIDList_bck;
+    std::vector<std::vector<int> > clusterArr;
     for( int itrk = 0; itrk < sprialArr->GetEntries(); itrk++){
       std::cout<< itrk << std::endl;
-      Bool_t bMerged = false;
-      for( int is = 0; is < MergedIndexArr.size(); is++){
-	if( itrk == MergedIndexArr.at(is)){
-	  bMerged = true;
-	}
-      }
-      if( bMerged ){ continue; }
-      HSprial* isprial = (HSprial*)sprialArr->At(itrk);
-      TGraph2D* itrack = (TGraph2D*)TrkArr->At(itrk);
-      if( itrack == NULL ){ std::cout<< "NULL" << std::endl; continue; }
-      if( itrack->GetN() < 3 ){ continue; }
-      for( int jtrk = 0; jtrk < TrkArr->GetEntries(); jtrk++){
-	std::cout <<"TrackID : "<<  itrk << "\t" << jtrk << std::endl;
-	if( itrk == jtrk ){ continue; }
-	for( int is = 0; is < MergedIndexArr.size(); is++){
-	  if( jtrk == MergedIndexArr.at(is)){
-	    bMerged = true;
+      TGraph2D* itrack = (TGraph2D*)TrackArr->At(itrk);
+      if( itrack->GetN() < 5 ){ continue; }
+      tmpIDList.push_back( itrk );
+      tmpIDList_bck.push_back( itrk );
+    }
+    std::cout<< "tmpIDList.size() " << tmpIDList.size() << std::endl;
+    for( std::list<int>::iterator i = tmpIDList.begin();
+	 i != tmpIDList.end();
+	 i++){
+      std::cout << *i << "\t";
+    }
+    std::cout<< std::endl;
+
+    while( tmpIDList.size() > 0){
+      std::vector<int> indexList;
+      //indexList.clear();
+      int firstIndex = tmpIDList.front();
+      indexList.push_back(firstIndex);
+      tmpIDList.pop_front();
+      for(int i = 0 ; i < indexList.size(); i++){
+	std::cout<< indexList.at(i) << std::endl;
+	TGraph2D* itrack = (TGraph2D*)TrackArr->At(indexList.at(i));
+	HSprial*  isprial= (HSprial*)sprialArr->At(indexList.at(i));
+	for( std::list<int>::iterator j = tmpIDList.begin();
+	     j != tmpIDList.end();
+	     j++){
+
+	  TGraph2D* jtrack = (TGraph2D*)TrackArr->At(*j);
+	  HSprial* jsprial = (HSprial*)sprialArr->At(*j);
+	  Double_t r0,y0;
+	  Double_t r1,y1;
+	  isprial->CalculateDist(jtrack,r0,y0);
+	  jsprial->CalculateDist(itrack,r1,y1);
+	  if( (r0 < 10 && y0 < 20) ||
+	      (r1 < 10 && y1 < 20) ){
+	    std::cout<< "ADD" << std::endl;
+	    std::cout<< indexList.size() << "\t" <<indexList.at(i) << "\t" <<  *j << std::endl;
+	    Int_t k = (int)(*j);
+	    std::cout<< k << std::endl;
+	    indexList.push_back(k);
+	    std::cout<< indexList.size() << std::endl;
+	    std::list<int>::iterator dj = j--;
+	    tmpIDList.erase(dj);
 	  }
 	}
-	if( bMerged ){ continue; }
-	TGraph2D* jtrack = (TGraph2D*)TrkArr->At(jtrk);
-	if( jtrack == NULL ){ std::cout<< "NULL" << std::endl; continue; }
-	if( jtrack->GetN() < 3 ){ continue; }
-	Double_t r,y;
-	isprial->CalculateDist(jtrack,r,y);
-	std::cout<< r << "\t" << y << std::endl;
-	dR[nComb] = r;
-	dY[nComb] = y;
-	if( r < 10 && y < 20 ){
-	  std::cout<< "Merged" << std::endl;
-	  Int_t startIndex = itrack->GetN();
-	  std::cout<< "SetPoint " << startIndex <<  std::endl;
-	  for( int jp = 0; jp < jtrack->GetN(); jp++){
-	    std::cout<< jp << "/" << jtrack->GetN() << std::endl;
-	    Int_t index = startIndex + jp;
-	    itrack->SetPoint(index,
-			     jtrack->GetX()[jp],
-			     jtrack->GetY()[jp],
-			     jtrack->GetZ()[jp]);
-	  }
-	  MergedIndexArr.push_back(jtrk);
-	  //TrkArr->RemoveAt(jtrk);
-	  std::cout<<"Removed" << std::endl;
-	}
-	nComb++;
       }
-      std::cout<< "iend" << std::endl;
+      clusterArr.push_back(indexList);
     }
+    nTrackBefore = tmpIDList_bck.size();
+    nTrackAfter  = clusterArr.size();
+    std::cout<< "//////////////////////////////////////////////////" << std::endl;
+    std::cout<< "Cluster Size : " << clusterArr.size() << std::endl;
+    std::cout<< "//////////////////////////////////////////////////" << std::endl;
 
-    std::cout<< "Write track " << MergedIndexArr.size() << std::endl;
-    nMerged = 0;
-    for( int itrk = 0; itrk < TrkArr->GetEntries(); itrk++){
-      Bool_t bMerged = false;
-      for( int is = 0; is < MergedIndexArr.size(); is++){
-	if( itrk == MergedIndexArr.at(is)){
-	  bMerged = true;
-	}
+    for( std::vector<std::vector<int> >::iterator i = clusterArr.begin();
+	 i  != clusterArr.end();
+	 i++ ){
+      std::cout<< "Cluster" << std::endl;
+      for( std::vector<int>::iterator j = (*i).begin();
+	   j != (*i).end();
+	   j++){
+	std::cout<< *j << "\t";
       }
-      if( bMerged ){ continue; }
-      std::cout<< itrk << "\t" << TrkArr->GetEntries() << std::endl;
-      TGraph2D* itrack = (TGraph2D*)TrkArr->At(itrk);
-      std::cout<< itrack << std::endl;
-      if( itrack == NULL ){ continue; }
-      if( itrack->GetN() < 3 ){ continue; }
-      new((*MergedTrkArr)[nMerged]) TGraph2D(*itrack);
-      nMerged++;
+      std::cout<< std::endl;
     }
-
-    /*
-    can->cd(1);
-    for( int itrk = 0; itrk < TrkArr->GetEntries(); itrk++){
-      grX[itrk]->Draw("P");
-    }
-    can->Update();
-    can->Modified();
-    gSystem->ProcessEvents();
-    getchar();
-    */
+    //getchar();
     otr->Fill();
   }
   otr->Write();
