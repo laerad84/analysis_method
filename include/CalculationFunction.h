@@ -47,6 +47,7 @@ class HyperCalculator : public TObject{
   static Bool_t   CLCrossing( HHelix sprial, HLine line, TVector3& vec, double& dist );//// Calculate circle - line crossing
   static Bool_t   LLCrossing( HLine line0, HLine line1, TVector3& vec, double& dist );//// Calculate line -line crossing
 
+  
  public:
   ClassDef( HyperCalculator, 0 )
 };
