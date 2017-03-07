@@ -20,5 +20,5 @@
 #pragma link C++ function CalculateMomentum;
 #pragma link C++ function GenerateCrossingPoints;
 
-
+#pragma link C++ class HyperCalculator;
 #endif

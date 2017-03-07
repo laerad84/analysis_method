@@ -5,7 +5,7 @@
 #pragma link off all functions;
 #pragma link C++ class  TPCPadHit+;
 #pragma link C++ class  TPCPadHitCluster+;
-#pragma link C++ class  TPCTrack++;
+//#pragma link C++ class  TPCTrack++;
 #pragma link C++ function TPCClusterer;
 #pragma link C++ function TPCFindBlock;
 #pragma link C++ function TPCFindEdgeBlock;

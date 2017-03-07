@@ -339,7 +339,7 @@ TPCPadHitCluster TPCClusterer( int rowID, std::vector<TPCPadHit> &hitArr, Int_t 
   return cluster;
 }
 
-
+/*
 ClassImp(TPCTrack)
 TPCTrack::TPCTrack(){
   m_TrackID = -1;
@@ -362,6 +362,7 @@ double TPCTrack::FitCircle(){
   double chi;
   return chi;
 }
+*/
 
 std::vector<TPCPadHitCluster> TPCTrackBlocking( std::vector<TPCPadHitCluster> &clusterArr, Int_t Direction){
   //find Minimum Row clusterArr

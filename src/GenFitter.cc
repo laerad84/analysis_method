@@ -1,13 +1,13 @@
 #include "GenFitter.h"
 
 ClassImp(GenFitter)
-
-GenFitter::GenFitter( char* geometryFilename ){
-
+GenFitter* gGenFitter = new GenFitter();
+GenFitter::GenFitter( ){
+  ;
   //new TGeoManager("TPCGeom","E42 Geometry");
   //gGeoManager->Import(geometryFilename);
   //genfit::MaterialEffects::getInstance()->init( new genfit::TGeoMaterialInterface() );
-  Init(geometryFilename);
+//Init(geometryFilename);
   /*
   genfit::Fieldmanager::GetInstance()->init( new genfit::VariableField("/Users/jwlee/local/hep/E42/E42/data/field/SC_FieldMap.root", FieldCenter), FieldRotation);
   fitter = new genfit::KalmanFitterRefTrack();
@@ -16,6 +16,10 @@ GenFitter::GenFitter( char* geometryFilename ){
   */
 
 }
+GenFitter::GenFitter( char* geometryFilename ){
+  Init(geometryFilename);
+}
+
 
 GenFitter::~GenFitter(){
   delete myProducer;
@@ -39,7 +43,7 @@ void GenFitter::SetField(char* fieldFilename, TVector3 fieldCenter, TVector3 fie
   genfit::FieldManager::getInstance()->init( new genfit::VariableField(fieldFilename, fieldCenter,fieldRotation));
 }
 
-Bool_t GenFitter::Fit( TClonesArray* clarr, HSprial sprial , Int_t PID, TVector3& posFit, TVector3& momFit ){
+Bool_t GenFitter::Fit( TClonesArray* clarr, HHelix sprial , Int_t PID, TVector3& posFit, TVector3& momFit ){
   if ( PID != 2212 &&
        PID != 321  &&
        PID != 211  &&

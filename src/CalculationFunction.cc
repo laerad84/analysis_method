@@ -114,11 +114,11 @@ TVector3 DyDtheta(TVector3 init, TVector3 middle, TVector3 final ){
   TVector3 result(Dy, Dtheta, RL);
   return result;
 }
-HSprial GenerateSprial( TVector3 init, TVector3 middle, TVector3 final){
+HHelix GenerateSprial( TVector3 init, TVector3 middle, TVector3 final){
 
   HCircle circle = ThreePointCircle( init, middle, final);
   TVector3 parameter = DyDtheta( init, middle, final );
-  HSprial sprial_result( circle.ID, circle.X, (init.Y()+final.Y())/2., circle.Z, circle.R, parameter.X(),parameter.Y(),(int)(parameter.Z()));
+  HHelix sprial_result( circle.ID, circle.X, (init.Y()+final.Y())/2., circle.Z, circle.R, parameter.X(),parameter.Y(),(int)(parameter.Z()));
   /// initial Y should be recalculated ///
   sprial_result.InitPos = init;
   sprial_result.FinalPos = final;
@@ -134,7 +134,10 @@ TPolyMarker3D* GenerateHitView( TClonesArray* arr ){
   TPolyMarker3D* marker = new TPolyMarker3D();
   for( int iarr = 0; iarr < arr->GetEntries(); iarr++){
     TPCHit* hit = (TPCHit*)arr->At(iarr);
-    marker->SetPoint( iarr, hit->Position.X(), hit->Position.Y(), hit->Position.Z());
+    marker->SetPoint( iarr,
+		      hit->Position().X(),
+		      hit->Position().Y(),
+		      hit->Position().Z());
   }
   return marker;
 }
@@ -160,13 +163,13 @@ TPolyMarker3D* GenerateClusterView( std::vector<TPCCluster> arr){
   }
   return marker;
 }
-Double_t CalculateDeltaR( HSprial sprial, TVector3 vec){
+Double_t CalculateDeltaR( HHelix sprial, TVector3 vec){
   Double_t dx = vec.X() - sprial.X;
   Double_t dz = vec.Z() - sprial.Z;
   Double_t dr = TMath::Sqrt( dx*dx + dz*dz ) - sprial.R;
   return dr;
 }
-Double_t CalculateDeltaY( HSprial sprial, TVector3 vec ){
+Double_t CalculateDeltaY( HHelix sprial, TVector3 vec ){
   Double_t initTheta = TMath::ATan2(sprial.InitPos.X()-sprial.X,sprial.InitPos.Z()-sprial.Z);
   Double_t theta     = TMath::ATan2( vec.X() - sprial.X, vec.Z() - sprial.Z);
   Double_t dTheta    = 0;
@@ -177,7 +180,7 @@ Double_t CalculateDeltaY( HSprial sprial, TVector3 vec ){
   Double_t dy    = vec.Y() - dTheta*sprial.DY/sprial.DTheta - sprial.Y;
   return dy;
 }
-Double_t CalculateY( HSprial sprial, TVector3 vec ){
+Double_t CalculateY( HHelix sprial, TVector3 vec ){
   Double_t initTheta = TMath::ATan2(sprial.InitPos.X()-sprial.X,sprial.InitPos.Z()-sprial.Z);
   Double_t theta     = TMath::ATan2( vec.X() - sprial.X, vec.Z() - sprial.Z);
   Double_t dTheta    = theta - initTheta;
@@ -186,16 +189,23 @@ Double_t CalculateY( HSprial sprial, TVector3 vec ){
   Double_t y    = dTheta*sprial.DY/sprial.DTheta + sprial.InitPos.Y();
   return y;
 }
-Bool_t CalculateCircleCrossing( HSprial sprial0, HSprial sprial1, TVector3& vec0, TVector3& vec1 ){
+Bool_t CalculateCircleCrossing( HHelix sprial0, HHelix sprial1, TVector3& vec0, TVector3& vec1 ){
   Double_t r0 = sprial0.R;
   Double_t r1 = sprial1.R;
   TVector2 v0(sprial0.X,sprial1.Z);
   TVector2 v1(sprial1.X,sprial1.Z);
   Double_t dist = (v1 - v0).Mod();
+
   if( dist > r0 +r1 ||
       dist < TMath::Abs(r0 -r1 )){
-    vec0=TVector3(0,0,0);
-    vec1=TVector3(0,0,0);
+    Double_t y0 = CalculateY( sprial0, TVector3( sprial1.X,0,sprial1.Z));
+    Double_t y1 = CalculateY( sprial1, TVector3( sprial0.X,0,sprial0.Z));
+    TVector3 pVec(sprial0.X - sprial1.X, 0, sprial1.Z - sprial1.Z);
+    TVector3 nVec = pVec.Unit();
+    TVector3 vv0 = TVector3( sprial0.X, y0, sprial0.Z ) + sprial0.R*nVec;
+    TVector3 vv1 = TVector3( sprial1.X, y1, sprial1.Z ) - sprial1.R*nVec;
+    vec0 = vv0;
+    vec1 = vv1;
     return false;
   }
   Double_t phi = (v1-v0).Phi();
@@ -222,7 +232,7 @@ Bool_t CalculateCircleCrossing( HSprial sprial0, HSprial sprial1, TVector3& vec0
 
   return true;
 }
-Bool_t CalculateCircleTangent( HSprial sprial0, TVector3 pos, TVector3& vec ){
+Bool_t CalculateCircleTangent( HHelix sprial0, TVector3 pos, TVector3& vec ){
   Double_t r0 = sprial0.R;
   TVector3 vecCenter = TVector3(pos.X()-sprial0.X, 0,pos.Z() - sprial0.Z);
   if( sprial0.RL > 0 ){
@@ -235,12 +245,12 @@ Bool_t CalculateCircleTangent( HSprial sprial0, TVector3 pos, TVector3& vec ){
   return true;
 }
 
-Bool_t CalculateCrossing( HSprial sprial0, HSprial sprial1, Double_t& dist, TVector3& pos ){
+Bool_t CalculateCrossing( HHelix sprial0, HHelix sprial1, Double_t& dist, TVector3& pos ){
   TVector3 v0;
   TVector3 v1;
-  if( !CalculateCircleCrossing( sprial0, sprial1, v0,v1) ){
-    dist = 1e8;
-    pos= TVector3(0,0,0);
+  if( !CalculateCircleCrossing( sprial0, sprial1, v0,v1) ){// not connected
+    dist = (v0 - v1).Mag();
+    pos = TVector3( (v0.X() + v1.X())/2,(v0.Y() + v1.Y())/2,(v0.Z() + v1.Z())/2 );
     return false;
   }
   Double_t y00 = CalculateY( sprial0, v0);
@@ -260,25 +270,25 @@ Bool_t CalculateCrossing( HSprial sprial0, HSprial sprial1, Double_t& dist, TVec
   }
   return true;
 }
-double CalculateMomentumR( HSprial sprial, double dtesla){
-  std::cout<< __PRETTY_FUNCTION__ << std::endl;
-  return sprial.R * dtesla / 3.36;
+double CalculateMomentumR( HHelix sprial, double dtesla){
+  //std::cout<< __PRETTY_FUNCTION__ << std::endl;
+  return sprial.R * dtesla * 0.3;
 }
-double CalculateMomentumY( HSprial sprial, double dtesla){
-  std::cout<< __PRETTY_FUNCTION__ << std::endl;
+double CalculateMomentumY( HHelix sprial, double dtesla){
+  //std::cout<< __PRETTY_FUNCTION__ << std::endl;
   double momentumR = CalculateMomentumR( sprial, dtesla );
   return momentumR * sprial.DY / TMath::Abs( sprial.R * sprial.DTheta );
 }
 
-double CalculateMomentum( HSprial sprial, double dtesla ){
-  std::cout<< __PRETTY_FUNCTION__ << std::endl;
+double CalculateMomentum( HHelix sprial, double dtesla ){
+  //std::cout<< __PRETTY_FUNCTION__ << std::endl;
   double pR = CalculateMomentumR( sprial, dtesla );
   double pY = CalculateMomentumY( sprial, dtesla );
   double totalMomentum = TMath::Sqrt( pR*pR + pY*pY );
   return totalMomentum;
 }
 
-TPolyMarker3D* GenerateCrossingPoints( std::vector<HSprial> PSprial, std::vector<HSprial> MSprial ){
+TPolyMarker3D* GenerateCrossingPoints( std::vector<HHelix> PSprial, std::vector<HHelix> MSprial ){
   /// Calculation crossing point combination between particle +/-
   TPolyMarker3D* marker = new TPolyMarker3D();
   for( int ip = 0; ip < PSprial.size(); ip++){
@@ -292,4 +302,132 @@ TPolyMarker3D* GenerateCrossingPoints( std::vector<HSprial> PSprial, std::vector
     }
   }
   return marker;
+}
+
+ClassImp( HyperCalculator )
+HyperCalculator::HyperCalculator(){
+  ;
+}
+HyperCalculator::~HyperCalculator(){
+  ;
+}
+TVector3 HyperCalculator::CalculateMomentum( HHelix sprial, TVector3 pos, Double_t dtesla ){
+  TVector3 momentum(0,0,0);
+  // Calculate center to point direction
+  TVector3 vecNorm( pos.X() - sprial.X(),0, pos.Z() - sprial.Z());
+  if( sprial.RL > 0 ){
+    // RL > 0 : positive
+    vecNorm.RotateY( TMath::DegToRad() * 90 );
+  }else if( sprial.RL < 0 ){
+    // RL < 0 : negative
+    vecNorm.RotateY(-TMath::DegToRad() * 90 );
+  }else{
+    // bad sprial 
+    return momentum;
+  }
+  // Calculate momentum
+  Double_t px = vecNorm.Unit().X()*sprial.R*0.3*dtesla;//MeV/c
+  Double_t pz = vecNorm.Unit().Z()*sprial.R*0.3*dtesla;//MeV/c
+  Double_t py = sprial.DY/TMath::Abs(sprial.DTheta)*0.3*dtesla;//MeV/c
+  momentum.SetXYZ( px, py, pz);
+  return momentum; 
+}
+
+Bool_t HyperCalculator::CCCrossing( HHelix sprial0, HHelix sprial1, TVector3& vec, double& dist ){
+  Bool_t bConnected = CalculateCrossing( sprial0, sprial1, dist, vec);
+  return bConnected;
+}
+Bool_t HyperCalculator::CLCrossing( HHelix sprial, HLine line, TVector3& vec, double& dist ){
+  Double_t mag = TMath::Sqrt( line.Direction.Z()*line.Direction.Z() + line.Direction.X()*line.Direction.X() );
+  TVector2 vec_cc( sprial.Z, sprial.X);
+  TVector2 vec_direction(line.Direction.Z()/mag, line.Direction.X()/mag);
+  TVector2 vec_normal(line.Direction.X()/mag, -line.Direction.Z()/mag);
+  TVector2 vec_delta( sprial.Z - line.Offset.Z(), sprial.X - line.Offset.X());
+  Double_t distance = vec_normal.X()*vec_delta.X() + vec_normal.Y()*vec_delta.Y();
+  TVector2 vec_point( vec_normal.X()*distance, vec_normal.Y()*distance );
+  TVector3 vec0;
+  TVector3 vec1;
+  TVector3 meanHitPosition;
+  if( sprial.R >= TMath::Abs(distance) ){// crossed
+    /// Calculate crossing point
+    Double_t d  = TMath::Sqrt( sprial.R*sprial.R + distance*distance );
+    vec0.SetX(vec_cc.X() - vec_point.X() + vec_direction.X()*d);
+    vec0.SetY(vec_cc.Y() - vec_point.Y() + vec_direction.Y()*d);
+
+    vec1.SetX(vec_cc.X() - vec_point.X() - vec_direction.X()*d);
+    vec1.SetY(vec_cc.Y() - vec_point.Y() - vec_direction.Y()*d);
+
+    /// Calculate helix Y
+    Double_t y0  = CalculateY( sprial, TVector3( vec0.Y(), 0, vec0.Y()));
+    Double_t y1  = CalculateY( sprial, TVector3( vec1.Y(), 0, vec1.Y()));
+    Double_t yl0 = 0;
+    Double_t yl1 = 0;
+    /// Calculate line Y
+    if( vec_direction.X() != 0 ){/// z component
+      yl0 = ((vec0.X() - line.Offset.Z())/line.Direction.Z() * line.Direction.Y()) + line.Offset.Y();
+      yl1 = ((vec1.X() - line.Offset.Z())/line.Direction.Z() * line.Direction.Y()) + line.Offset.Y();
+    }else{/// x component
+      yl0 = ((vec0.Y() - line.Offset.X())/line.Direction.X() * line.Direction.Y()) + line.Offset.Y();
+      yl1 = ((vec1.Y() - line.Offset.X())/line.Direction.X() * line.Direction.Y()) + line.Offset.Y();
+    }
+    if( TMath::Abs( y0 - yl0 ) < TMath::Abs( y1 - yl1 )){
+      vec.SetXYZ( vec0.Z(), (y0+yl0)/2., vec0.X());
+      dist = y0-yl0;
+      return true;
+    }else{
+      vec.SetXYZ( vec1.Z(), (y1+yl1)/2., vec1.X());
+      dist = y1-yl1;
+      return true;
+    }
+    return true;
+  }else{ // not crossed
+    vec0.SetX(vec_cc.X() -sprial.R*vec_normal.X() );// closest point on circle
+    vec0.SetY(vec_cc.Y() -sprial.R*vec_normal.Y() );// closest point on circle
+    vec1.SetX(vec_cc.X() -vec_point.X() );
+    vec1.SetY(vec_cc.Y() -vec_point.Y() );
+
+    Double_t y0 = CalculateY( sprial, TVector3( vec0.Y(), 0, vec0.X()));
+    Double_t y1;
+    if( vec_direction.X() != 0 ){/// z component
+      y1 = ((vec1.X() - line.Offset.Z())/line.Direction.Z() * line.Direction.Y()) + line.Offset.Y();
+    }else{/// x component
+      y1 = ((vec1.Y() - line.Offset.X())/line.Direction.X() * line.Direction.Y()) + line.Offset.Y();
+    }
+    vec.SetXYZ( (vec0.Z()+vec1.Z())/2., (y0+y1)/2., (vec0.X()+vec0.X())/2. );
+    TVector3 delta_line( vec0.Z() - vec1.Z(), y0-y1, vec0.X() - vec1.X());
+    dist = delta_line.Mag();
+    return false;
+  }
+}
+Bool_t HyperCalculator::LLCrossing( HLine line0, HLine line1, TVector3& vec, double& dist ){
+
+  // Get Unit vector of the line
+  Double_t mag0 = line0.Direction.Mag();
+  Double_t mag1 = line1.Direction.Mag(); 
+  TVector3 v0(line0.Direction.X()/mag0,line0.Direction.Y()/mag0,line0.Direction.Z()/mag0);
+  TVector3 v1(line1.Direction.X()/mag1,line1.Direction.Y()/mag1,line1.Direction.Z()/mag1);
+  // Get shortest vector l0 -> l1 
+  TVector3 vCross = (v0.Cross(v1)).Unit();
+  Double_t d0     = line0.Offset.Dot(vCross);
+  Double_t d1     = line1.Offset.Dot(vCross);
+  Double_t vn     = (d1 - d0)*vCross;
+
+  // Calculate displacement of offsets
+  TVector3 vl     = line1.Offset - line0.Offset - vn;
+  TVector3 vls0   =  vl - ( vl.Dot( v0 ))*v0;
+  TVector3 vls1   =  vl - ( vl.Dot( v1 ))*v1;
+  TVector3 vD0    =  vls0.Mag()*(vls0.Dot(v0))*v0;
+  TVector3 vD1    =  vls1.Mag()*(vls1.Dot(v1))*v1;
+
+  // Calculate closest points on two lines
+  TVector3 vC0    = line0.Offset + vD0;
+  TVector3 vC1    = line1.Offset - vD1;
+
+  /// Center Position
+  vec.SetXYZ((vC0.X() + vC1.X())/2.,
+	     (vC0.Y() + vC1.Y())/2.,
+	     (vC0.Z() + vC1.Z())/2.);  
+  /// distance between two lines
+  dist = TMath::Abs( d0 - d1 );
+  return true;  
 }

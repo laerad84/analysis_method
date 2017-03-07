@@ -1,9 +1,10 @@
 #ifndef ConverterFunction__H__
 #define ConverterFunction__H__
 
-#include "TPCData.h"
+//#include "TPCData.h"
 #include "TPCGlobals.h"
 #include "Data.h"
+#include "Fitter.h"
 
 #include "GsimData/GsimDetectorEventData.h"
 #include "GsimData/GsimGenParticleData.h"
@@ -21,26 +22,33 @@
 #include <vector>
 #include <iostream>
 
-std::vector<TPCPadHit >       ConvertTPC(GsimDetectorEventData* detData,GsimGenParticleData* particle);
-//std::vector<TPCPadHitCluster> HitClustering(std::vector<TPCPadHit> &hitArr);
+
+std::vector<TPCHit > ConvertTPC(GsimDetectorEventData* detData,GsimGenParticleData* particle);/// Convert GsimData to PadHit.
+
 /// Clusterer
-Bool_t HitClusteringB( std::vector<TPCPadHit> &hitArr, std::vector<TPCPadHitCluster> &clusterArr );//will be delete
-Bool_t HitClustering( std::vector<TPCPadHit> &hitArr, std::vector<TPCCluster> & clusterArr );///will be delete
-Bool_t HitClustering( TClonesArray* HitArr, std::vector<TPCCluster>& clusterArr );///will be delete
-Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr );
-/// Blocker
-std::vector<TPCCluster> TPCClusterBlocker( std::vector<TPCCluster> &clArr, Int_t Direction);///will be delete
-std::vector<TPCCluster> TPCClusterSingleBlocker( std::vector<TPCCluster> &clArr);/// will be delete
+Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr );/// Clustering hits
+TPCTrack ConvertToTrack( TClonesArray* clusterArr);/// Tracking cluster
 
-/// Divide block
-Int_t  BlockDivider( std::vector<TPCCluster> &clArr, std::vector<TPCCluster> &trackCand, Int_t Mode = 0);/// will be delete
-
-///
-Bool_t AdjCluster( TPCCluster c_0, TPCCluster c_1, Int_t DRow);
-Bool_t AdjCluster( TPCCluster* c_0, TPCCluster* c_1, Int_t DRow);
-void   ConnectionFinder(std::vector<TPCCluster>& clArr);/// will be delete
-std::vector< std::vector<TPCCluster> > ConnectionBlocker( std::vector<TPCCluster> &clArr );///will bedelete
+Bool_t AdjCluster( TPCCluster c_0, TPCCluster c_1, Int_t DRow);/// Check adjacent cluster
+Bool_t AdjCluster( TPCCluster* c_0, TPCCluster* c_1, Int_t DRow);/// Check adjacent cluster
 std::vector<Int_t> GetListOfTrackRoot( TClonesArray* clArr );
-Bool_t ClusterBlocker( TClonesArray* clrr, TClonesArray* blockArr, std::vector<Int_t> BlockRoot, Int_t BlockIndex );
+Bool_t ClusterBlocker( TClonesArray* clrr, TClonesArray* blockArr, std::vector<Int_t> BlockRoot, Int_t BlockIndex );///
+////////////////////////////////////////////////////////////
+/// TrackHandler : function class for handling track data
+////////////////////////////////////////////////////////////
+class TrackHandler : public TObject {
+ public:
+  TrackHandler();
+  virtual    ~TrackHandler();
+  Bool_t     ConversionToTrack( TClonesArray* clusterArr , TPCTrack& track);
+  void       EvalTrackInit( TPCTrack& track, TVector3 initPoint, Double_t bfield = 1.0 );//// Set track parameters.
+  TPCTrack*  MergingTrack( TPCTrack* trk0, TPCTrack* trk1 );
+ public:
+  ClassDef( TrackHandler, 0)
+};
+
+R__EXTERN TrackHandler* gTrackHandler;
+
+
 
 #endif //ConverterFunction__H__

@@ -52,6 +52,8 @@
 
 #include <vector>
 #include <algorithm>
+#ifndef GENFITTER__H__
+#define GENFITTER__H__
 
 #include "TSystem.h"
 #include "TClonesArray.h"
@@ -87,13 +89,14 @@
 class GenFitter {
  public:
 
+  GenFitter();//( char* geometryFilename );
   GenFitter( char* geometryFilename );
   ~GenFitter();
 
 
   void   Init(char* geometryFilename);
   void   SetField( char* fieldFilename, TVector3 fieldCenter, TVector3 fieldRotation);
-  Bool_t Fit( TClonesArray* clarr, HSprial sprial , Int_t PID, TVector3& posFit, TVector3& momFit );
+  Bool_t Fit( TClonesArray* clarr, HHelix sprial , Int_t PID, TVector3& posFit, TVector3& momFit );
 
   genfit::AbsKalmanFitter* fitter;
   genfit::MeasurementFactory<genfit::AbsMeasurement>* factory;
@@ -102,3 +105,7 @@ class GenFitter {
 
   ClassDef( GenFitter, 1 )
 };
+
+R__EXTERN GenFitter* gGenFitter;
+
+#endif //GENFITTER__H__

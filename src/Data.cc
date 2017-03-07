@@ -1,4 +1,8 @@
 #include "Data.h"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HCircle
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ClassImp(HCircle)
 HCircle::HCircle(): ID(-1), X(0),Z(0),R(0){
   ;
@@ -22,19 +26,24 @@ void HCircle::Print(){
 	   << "XZR : " << X << ", " << Z << ", " << R << std::endl;
 }
 
-ClassImp(HSprial)
-HSprial::HSprial(): ID(-1),X(0),Y(0),Z(0),R(0),DTheta(0),DY(0),RL(0),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0),FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0){
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HHelix
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ClassImp(HHelix)
+HHelix::HHelix(): ID(-1),X(0),Y(0),Z(0),R(0),DTheta(0),DY(0),RL(0),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0),FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0){
   EX=0;
   EZ=0;
   ER=0;
 }
-HSprial::HSprial(Int_t id, Double_t x, Double_t y, Double_t z, Double_t r, Double_t dY, Double_t dTheta, Int_t rl):
+HHelix::HHelix(Int_t id, Double_t x, Double_t y, Double_t z, Double_t r, Double_t dY, Double_t dTheta, Int_t rl):
   ID(id),X(x),Y(y),Z(z),R(r),DTheta(dTheta),DY(dY),RL(rl),InitPos(0,0,0),InitMom(0,0,0),FinalPos(0,0,0),FitMom(0,0,0),nCluster(0),TrackLength(0),DepE(0) {
   EX=0;
   EZ=0;
   ER=0;
+  EY=0;
 }
-HSprial::HSprial(const HSprial& right){
+HHelix::HHelix(const HHelix& right){
   ID = right.ID;
   X  = right.X;
   Y  = right.Y;
@@ -42,10 +51,13 @@ HSprial::HSprial(const HSprial& right){
   R  = right.R;
   EX = right.EX;
   EZ = right.EZ;
+  EY = right.EY;
   ER = right.ER;
   DTheta = right.DTheta;
   DY     = right.DY;
+  EDYDTheta= right.EDYDTheta;
   RL     = right.RL;
+
   InitPos    = right.InitPos;
   InitMom    = right.InitMom;
   FinalPos   = right.FinalPos;
@@ -54,11 +66,33 @@ HSprial::HSprial(const HSprial& right){
   TrackLength= right.TrackLength;
   DepE       = right.DepE;
 }
-HSprial::~HSprial(){
+HHelix::~HHelix(){
   ;
 }
-void HSprial::Print(){
-  std::cout<< "Sprial ID : " << ID << "\n"
+void HHelix::ResetAll(){
+  ID=-1;
+  X=0;
+  Y=0;
+  Z=0;
+  R=0;
+  DTheta      = 0;
+  DY          = 0;
+  RL          = 0;
+  InitPos     = TVector3(0,0,0);
+  InitMom     = TVector3(0,0,0);
+  FinalPos    = TVector3(0,0,0);
+  FitMom      = TVector3(0,0,0);
+  nCluster    = 0;
+  TrackLength = 0;
+  DepE = 0;
+  EX   = 0;
+  EZ   = 0;
+  EY   = 0;
+  ER   = 0;
+  EDYDTheta = 0;
+}
+void HHelix::Print(){
+  std::cout<< "Helix ID  : " << ID << "\n"
 	   << "XYZR      : " << X << ", " << Y  << ", " << Z  << ", " << R << "\n"
 	   << "EXZR      : " << EX <<", " << EZ << ", " << ER << "\n"
 	   << "DTheta    : " << DTheta << "\n"
@@ -70,7 +104,7 @@ void HSprial::Print(){
   FinalPos.Print();
 
 }
-TPolyLine3D* HSprial::GenerateHelix(){
+TPolyLine3D* HHelix::GenerateHelix(){
   TPolyLine3D* tmpLine = new TPolyLine3D();
   Double_t c         = this->DY/( this->DTheta );
   Double_t thetaOff  = TMath::ATan2( InitPos.X() - X, InitPos.Z() - Z);
@@ -100,7 +134,7 @@ TPolyLine3D* HSprial::GenerateHelix(){
   }
   return tmpLine;
 }
-void HSprial::CalculateDist( TVector3 hitpos, Double_t& dR, Double_t& dY ){
+void HHelix::CalculateDist( TVector3 hitpos, Double_t& dR, Double_t& dY ){
   Double_t theta = TMath::ATan2(hitpos.X() - X, hitpos.Z() - Z );
   Double_t thetaOff= TMath::ATan2( InitPos.X() - X, InitPos.Z() - Z);
   Double_t tmpX  = R * TMath::Sin( theta ) + X;
@@ -116,7 +150,7 @@ void HSprial::CalculateDist( TVector3 hitpos, Double_t& dR, Double_t& dY ){
   dR = tmpR - R;
   //std::cout<< dY << "\t" << dR << std::endl;
 }
-void HSprial::CalculateDist( TGraph2D* grTrack, Double_t& dR, Double_t& dY ){
+void HHelix::CalculateDist( TGraph2D* grTrack, Double_t& dR, Double_t& dY ){
   Int_t nPoint=0;
   Double_t RSum=0;
   Double_t YSum=0;
@@ -131,7 +165,7 @@ void HSprial::CalculateDist( TGraph2D* grTrack, Double_t& dR, Double_t& dY ){
   dR = RSum / nPoint;
   dY = YSum / nPoint;
 }
-TPolyLine* HSprial::GenerateArc(){
+TPolyLine* HHelix::GenerateArc(){
   TPolyLine* tmpLine = new TPolyLine();
 
   Double_t c         = this->DY/( this->DTheta );
@@ -154,28 +188,37 @@ TPolyLine* HSprial::GenerateArc(){
   }
   return tmpLine;
 }
-TF1* HSprial::GenerateXY(){
+TF1* HHelix::GenerateXY(){
   Double_t thetaOffset = TMath::ATan2( InitPos.X() -X ,InitPos.Z() - Z);
   Double_t c = this->DY/this->DTheta;
   Double_t yOff = InitPos.Y();
-  TF1* func = new TF1("func","[0]*sin([1]*x+[2])+[3]");
+  TF1* func = new TF1("func","[0]*sin([1]*(x-[2])+[3])+[4]");
   func->SetParameter(0,this->R);
   func->SetParameter(1,1./c);
-  func->SetParameter(2,thetaOffset-yOff/c);
-  func->SetParameter(3,yOff);
+  func->SetParameter(2,yOff);
+  func->SetParameter(3,thetaOffset);
+  func->SetParameter(4,X);
+  func->SetRange(-300,300);
   return func;
 }
-TF1* HSprial::GenerateZY(){
+TF1* HHelix::GenerateZY(){
   Double_t thetaOffset = TMath::ATan2( InitPos.X() -X ,InitPos.Z() - Z);
   Double_t c = this->DY/this->DTheta;
   Double_t yOff = InitPos.Y();
-  TF1* func = new TF1("func","[0]*sin([1]*x+[2])+[3]");
+  TF1* func = new TF1("func","[0]*cos([1]*(x-[2])+[3])+[4]");
   func->SetParameter(0,this->R);
   func->SetParameter(1,1./c);
-  func->SetParameter(2,thetaOffset-yOff/c);
-  func->SetParameter(3,yOff);
+  func->SetParameter(2,yOff);
+  func->SetParameter(3,thetaOffset);
+  func->SetParameter(4,Z);
+  func->SetRange(-300,300);
   return func;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HTrack
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ClassImp(HTrack)
 HTrack::HTrack():ID(-1),R(0),DYDL(0),DYDT(0),Length(0),DepE(0){
   Momentum = TVector3(0,0,0);
@@ -193,48 +236,185 @@ HTrack::~HTrack(){
   ;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HLine
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ClassImp(HLine)
-HLine::HLine():ID(-1),SlopeX(0),SlopeY(0),SlopeZ(0),Offset(0){
-  ;
+HLine::HLine():ID(-1){
+  Direction    = TVector3(0,0,0);
+  ClosestPoint = TVector3(0,0,0);
+  Offset       = TVector3(0,0,0);
+  bNorm        = kFALSE;
 }
-HLine::HLine(Int_t id, Double_t slopeX,Double_t slopeY, Double_t slopeZ, Double_t offset):
-  ID(id),SlopeX(slopeX),SlopeY(slopeY),SlopeZ(slopeX),Offset(offset)
-{
-  ;
+HLine::HLine(Int_t id, TVector3 slope, TVector3 offset){
+  ID        = id;
+  Direction = slope;
+  Offset    = offset;
+  bNorm     = false;
 }
+
 HLine::HLine(const HLine& right){
-  ID = right.ID;
-  SlopeX = right.SlopeX;
-  SlopeY = right.SlopeY;
-  SlopeZ = right.SlopeZ;
-  Offset = right.Offset;
+  ID        = right.ID;
+  Direction = right.Direction;
+  Offset =   right.Offset;
+  bNorm     = bNorm;
 }
+
 HLine::~HLine(){
   ;
 }
 void HLine::Print(){
   std::cout<< "Line ID  : " << ID << "\n"
-	   << "SlopeXYZ : " << SlopeX << ", " << SlopeY << ", " << SlopeZ << "\n"
-	   << "Offset   : " << Offset
 	   << std::endl;
+  std::cout<< "Direction " << std::endl;
+  Direction.Print();
+  std::cout<< "Offset" << std::endl;
+  Offset.Print();
+  std::cout<< "ClosestPoint" << std::endl;
+  ClosestPoint.Print();
 }
-ClassImp(TPCHit)
-TPCHit::TPCHit():ID(-1),Row(-1),Col(-1),Y(0),Energy(0){
+void HLine::Normalize(){
+  Double_t NormDirection = Direction.Mag();
+  Direction = Direction.Unit();
+  bNorm = kTRUE;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class TPCHit
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+  TPCHit::TPCHit():ID(-1),Row(-1),Col(-1),Y(0),Energy(0){
   ;
-}
-TPCHit::TPCHit( int id, Double_t y, Double_t energy): ID( id ),Row(-1),Col(-1),Y(y),Energy(energy){
+  }
+  TPCHit::TPCHit( int id, Double_t y, Double_t energy): ID( id ),Row(-1),Col(-1),Y(y),Energy(energy){
   ;
-}
-TPCHit::TPCHit(const TPCHit& right ){
+  }
+  TPCHit::TPCHit(const TPCHit& right ){
   ID     = right.ID;
   Row    = right.Row;
   Col    = right.Col;
   Y      = right.Y;
   Energy = right.Energy;
+  }
+  TPCHit::~TPCHit(){
+  ;
+  }
+*/
+
+ClassImp( TPCHit )
+
+TPCHit::TPCHit(){
+  m_TrackID   = -1;
+  m_ClusterID = -1;
+  m_HitID     = -1;
+  m_PadID     = -1;
+  m_MCTrackID = -1;
+  m_Row       = -1;
+  m_Col       = -1;
+  m_pos = TVector3(0,0,0);
+  m_posErr = TVector3(0,0,0);
+  m_Phi=0.;
+  m_Rad=0.;
+  m_energy = 0;
+  m_signal = 0;
+  m_rawTiming = 0;
+  m_timing = 0;
+
+  IsClustered = false;
+  IsTracked   = false;
 }
-TPCHit::~TPCHit(){
+TPCHit::TPCHit(const TPCHit& right):
+  m_TrackID(right.m_TrackID),
+  m_MCTrackID(right.m_MCTrackID),
+  m_ClusterID(right.m_ClusterID),
+  m_HitID(right.m_HitID),
+  m_PadID(right.m_PadID),
+  m_pos(right.m_pos),
+  m_posErr(right.m_posErr),
+  m_Row(right.m_Row),
+  m_Col(right.m_Col),
+  m_Phi(right.m_Phi),
+  m_Rad(right.m_Rad),
+  m_energy(right.m_energy),
+  m_signal(right.m_signal),
+  m_rawTiming(right.m_rawTiming),
+  m_timing(right.m_timing),
+  IsClustered(right.IsClustered),
+  IsTracked(right.IsTracked)
+{
   ;
 }
+TPCHit::TPCHit(int padID, TVector3 pos, double energy ) :
+  m_TrackID(-1),
+  m_ClusterID(-1),
+  m_HitID(-1),
+  m_PadID(padID),
+  m_MCTrackID(-1),
+  m_Row(gTPCIDHandler->GetRow(padID)),
+  m_Col(gTPCIDHandler->GetCol(padID)),
+  m_pos(pos),
+  m_posErr(TVector3(0,0,0)),
+  m_energy(energy),
+  m_signal(0.),
+  m_Phi(0.),
+  m_Rad(0.),
+  m_rawTiming(0),
+  m_timing(0),
+  IsClustered(false),
+  IsTracked(false){
+  /*
+    m_TrackID = -1;
+    m_ClusterID = -1;
+    m_HitID = -1;
+    m_PadID = padID;
+    m_MCTrackID = -1;
+
+    m_Row = gTPCIDHandler->GetRow(padID);
+    m_Col  = gTPCIDHandler->GetCol(padID);
+    m_pos =  pos;
+    m_posErr = TVector3(0,0,0);
+
+    m_energy = energy;
+    m_signal = 0;
+    m_rawTiming = 0;
+    m_timing = 0;
+
+    IsClustered = false;
+    IsTracked   = false;
+  */
+
+}
+TPCHit::~TPCHit(){
+  Clear();
+}
+void TPCHit::Clear(Option_t* opt){
+
+  m_TrackID   = -1;
+  m_ClusterID = -1;
+  m_HitID     = -1;
+  m_PadID     = -1;
+  m_MCTrackID = -1;
+  m_Row       = -1;
+  m_Col       = -1;
+  m_pos = TVector3(0,0,0);
+  m_posErr = TVector3(0,0,0);
+
+  m_energy = 0;
+  m_signal = 0;
+  m_rawTiming = 0;
+  m_timing = 0;
+
+  IsClustered = false;
+  IsTracked   = false;
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class TPCCluster
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ClassImp(TPCCluster)
 TPCCluster::TPCCluster():ID(-1),Energy(0),Row(-1),Col(-1),ColMin(0),ColMax(0),Position(0,0,0),YMin(0),YMax(0),NHit(0),Mother(-1),Daughter(-1),nMother(0),nDaughter(0),MinMotherDist(-1),MinDaughterDist(-1),MotherY(-999),DaughterY(-999),Blocked(false){
@@ -308,36 +488,310 @@ void TPCCluster::Print(){
   }
   std::cout<< std::endl;
 }
-ClassImp(TempCluster)
-TempCluster::TempCluster(){
-  Init();
-}
-TempCluster::TempCluster( const TempCluster& right ){
-  Init();
-  ID = right.ID;
-  nMother = right.nMother;
-  nDaughter = right.nDaughter;
 
-  for( int i = 0; i< nMother; i++){
-    Mother[i] = right.Mother[i];
-  }
-  for( int i = 0; i< nDaughter;i++){
-    Daughter[i] = right.Daughter[i];
-  }
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class TPCTrack
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp(TPCTrack)
+TPCTrack::TPCTrack(){
+  ID           = -1;
+  PID          = 0;
+  InitialRowID = -1;
+  FinalRowID   = -1;
+  nCluster     = 0;
+  track        = new TGraph2D();
+  trackErr     = new TGraph2D();
+  EArr.clear();
+  Momentum     = TVector3(0,0,0);
+  Length       = 0;
+  DepE         = 0;
+  ChisqY       = 0;
+  ChisqR       = 0;
 }
-TempCluster::~TempCluster(){
+
+TPCTrack::TPCTrack( const TPCTrack& right){
+  ID           = right.ID;
+  PID          = right.PID;
+  InitialRowID = right.InitialRowID;
+  FinalRowID   = right.FinalRowID;
+  track        = right.track;
+  trackErr     = right.trackErr;
+  EArr.clear();
+  for( int i = 0; i< right.EArr.size(); i++){
+    EArr.push_back( right.EArr.at(i));
+  }
+  Momentum = right.Momentum;
+  Length   = right.Length;
+  DepE     = right.DepE;
+  ChisqR   = right.ChisqR;
+  ChisqY   = right.ChisqY;
+  helix    = right.helix;
+}
+
+TPCTrack::~TPCTrack(){
   ;
 }
-void TempCluster::Init(){
+
+void TPCTrack::Init(){
+  ID           = -1;
+  PID          = 0;
+  InitialRowID = -1;
+  FinalRowID   = -1;
+  nCluster     = 0;
+  track->Set(0);
+  trackErr->Set(0);
+  EArr.clear();
+
+  Length = 0;
+  DepE = 0;
+  ChisqR = 0;
+  ChisqY = 0;
+  Momentum.SetXYZ(0,0,0);
+  helix.ResetAll();
+}
+
+void TPCTrack::Print(){
+  std::cout << "Track ID : " << ID << "\n"
+	    << "RowID    : " << InitialRowID << "\t" << FinalRowID << "\n"
+	    << "PID      : " << PID    << "\n"
+	    << "Length   : " << Length << "\t"
+	    << "DepositE : " << DepE   << "\n";
+  helix.Print();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HPiM
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HPiM )
+HPiM::HPiM(){
+  ID          = -1;
+  RecMass     = 0;
+  Energy      = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+}
+
+HPiM::HPiM( const HPiM& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+}
+
+HPiM::~HPiM(){
+  ;
+}
+
+void HPiM::Init(){
   ID = -1;
-  nMother = 0;
-  nDaughter = 0;
-  idList.clear();
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+}
 
-  for( int i = 0; i< 16; i++){
-    Mother[i] = -1;
-    Daughter[i] = -1;
-  }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HKaonP
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HKaonP )
+HKaonP::HKaonP(){
+  ID          = -1;
+  RecMass     = 0;
+  Energy      = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+}
 
+HKaonP::HKaonP( const HKaonP& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+}
+
+HKaonP::~HKaonP(){
+  ;
+}
+
+void HKaonP::Init(){
+  ID = -1;
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HProton
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HProton )
+HProton::HProton(){
+  ID          = -1;
+  RecMass     = 0;
+  Energy      = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+}
+
+HProton::HProton( const HProton& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+}
+
+HProton::~HProton(){
+  ;
+}
+
+void HProton::Init(){
+  ID = -1;
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HLambda
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HLambda )
+HLambda::HLambda(){
+  ID=-1;
+  RecMass     = 0;
+  Energy      = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+  proton      = new HProton();
+  pion        = new HPiM();
+}
+HLambda::HLambda( const HLambda& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+  proton    = right.proton;
+  pion      = right.pion;
+}
+HLambda::~HLambda(){
+  ;
+}
+void HLambda::Init(){
+  ID = -1;
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+  proton->Init();
+  pion->Init();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HCascade
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HCascade )
+HCascade::HCascade(){
+  ID=-1;
+  RecMass     = 0;
+  Energy      = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+  lambda      = new HLambda();
+  pion        = new HPiM();
+}
+
+HCascade::HCascade( const HCascade& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+  lambda    = right.lambda;
+  pion      = right.pion;
+}
+HCascade::~HCascade(){
+  ;
+}
+void HCascade::Init(){
+  ID = -1;
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+  lambda->Init();
+  pion->Init();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HDibaryonLL
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HDibaryonLL )
+HDibaryonLL::HDibaryonLL(){
+  ID=-1;
+  RecMass     = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+  lambda0     = new HLambda();
+  lambda1     = new HLambda();
+}
+HDibaryonLL::HDibaryonLL( const HDibaryonLL& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+  lambda0   = right.lambda0;
+  lambda1   = right.lambda1;
+}
+HDibaryonLL::~HDibaryonLL(){
+  ;
+}
+void HDibaryonLL::Init(){
+  ID = -1;
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+  lambda0->Init();
+  lambda1->Init();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Class HDibaryonPC
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ClassImp( HDibaryonPC )
+HDibaryonPC::HDibaryonPC(){
+  ID=-1;
+  RecMass     = 0;
+  Energy      = 0;
+  Momentum    = TLorentzVector(0,0,0,0);
+  Position    = TVector3(0,0,0);
+  cascade     = new HCascade();
+  pion        = new HPiM();
+}
+HDibaryonPC::HDibaryonPC( const HDibaryonPC& right ){
+  ID        = right.ID;
+  RecMass   = right.RecMass;
+  Energy    = right.Energy;
+  Momentum  = right.Momentum;
+  Position  = right.Position;
+  cascade   = right.cascade;
+  pion      = right.pion;
+}
+HDibaryonPC::~HDibaryonPC(){
+  ;
+}
+void HDibaryonPC::Init(){
+  ID = -1;
+  RecMass = 0;
+  Energy      = 0;
+  Momentum = TLorentzVector(0,0,0,0);
+  Position = TVector3(0,0,0);
+  cascade->Init();
+  pion->Init();
 }

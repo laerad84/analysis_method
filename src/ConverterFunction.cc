@@ -1,5 +1,6 @@
 #include "ConverterFunction.h"
-#include "TPCData.h"
+//#include "TPCData.h"
+#include "Data.h"
 #include "GsimData/GsimDetectorHitData.h"
 #include "GsimData/GsimDetectorEventData.h"
 #include "GsimData/GsimGenParticleData.h"
@@ -7,9 +8,10 @@
 #include "TRandom.h"
 #include "TProfile.h"
 
-std::vector<TPCPadHit> ConvertTPC(GsimDetectorEventData* detData, GsimGenParticleData* particle){
 
-  std::vector<TPCPadHit> PadHitArr;
+std::vector<TPCHit> ConvertTPC(GsimDetectorEventData* detData, GsimGenParticleData* particle){
+
+  std::vector<TPCHit> PadHitArr;
   TClonesArray* m_HitArr = detData->hits;
   TClonesArray* m_TrackArr = particle->briefTracks;
 
@@ -43,8 +45,8 @@ std::vector<TPCPadHit> ConvertTPC(GsimDetectorEventData* detData, GsimGenParticl
     }
   }
 
-  //// generate average hit point by pad // TPCPadHit
-  //std::vector<TPCPadHit> m_PadHitArr;
+  //// generate average hit point by pad // TPCHit
+  //std::vector<TPCHit> m_PadHitArr;
   Int_t iTrack = 0;
   Int_t iHit   = 0;
   Int_t indexhit = 0;
@@ -52,7 +54,7 @@ std::vector<TPCPadHit> ConvertTPC(GsimDetectorEventData* detData, GsimGenParticl
   for( int iarr = 0; iarr < hitTrackIDList.size(); iarr++){
     gTPCConvHistArray->Reset();
 
-    // make TPCPadHit array by track //
+    // make TPCHit array by track //
     Int_t nFill = 0;
     for( int jarr = 0; jarr < hitTrackIDList.at(iarr).size(); jarr++){
       GsimDetectorHitData* hit = (GsimDetectorHitData*)m_HitArr->At(hitTrackIDList.at(iarr).at(jarr));
@@ -91,7 +93,7 @@ std::vector<TPCPadHit> ConvertTPC(GsimDetectorEventData* detData, GsimGenParticl
 	double   yerr = prof->GetBinError( icol+1 );
 	double   ene  = prjt->GetBinContent( icol+1 );
 	if( ene < 10 ){ continue; }//75eV
-	TPCPadHit padHit;
+	TPCHit padHit;
 	TVector2 TPCXZ = gTPCIDHandler->GetXZ( irow, icol );
 	TVector3 vec(TPCXZ.X(), ymean, TPCXZ.Y());
 	padHit.SetPadID(padID);
@@ -121,407 +123,13 @@ std::vector<TPCPadHit> ConvertTPC(GsimDetectorEventData* detData, GsimGenParticl
 
   return PadHitArr;
 }
-
-/*
-std::vector<TPCPadHitCluster> HitClustering(std::vector<TPCPadHit> &hitArr){
-  std::vector<TPCPadHitCluster> clusterArr;
-  Int_t clusterID = 0;
-  for( int irow = 0; irow < 32; irow++){
-    while( hitArr.size() != 0 ){
-      TPCPadHitCluster cluster  = TPCClusterer( irow, hitArr );
-      if( cluster.HitArr().size() != 0 ){
-	cluster.SetClusterID(clusterID);
-	cluster.m_nHit = cluster.HitArr().size();
-	cluster.Evaluate();
-	std::cout<<"HitClustering"
-		 << cluster.HitArr().size() << "\t"
-		 << cluster.nHit()          << "\t"
-		 << cluster.Energy()        << "\t"
-		 << cluster.YMin()          << "\t"
-		 << cluster.YMax()          << std::endl;
-	clusterArr.push_back( cluster );
-	clusterID++;
-      }else{ break; }
-    }
-  }
-  return clusterArr;
-}*/
-Bool_t HitClusteringB( std::vector<TPCPadHit> &hitArr, std::vector<TPCPadHitCluster> &clusterArr ){
-  clusterArr.clear();
-  Int_t clusterID = 0;
-  Int_t clIndex   = 0;
-  //for( int irow = 0; irow < 32; irow++){
-  for( int irow = 0; irow < 12; irow++){
-    while( hitArr.size() != 0 ){
-      TPCPadHitCluster cluster  = TPCClusterer( irow, hitArr );
-      if( cluster.HitArr().size() != 0 ){
-
-	clIndex = clusterArr.size();
-	cluster.SetClusterID(clusterID);
-	cluster.m_nHit = cluster.HitArr().size();
-	cluster.Evaluate();
-	clusterArr.push_back( cluster );
-	clusterArr.at(clIndex).m_HitArr.clear();
-	for( int ihit = 0; ihit < cluster.HitArr().size(); ihit++){
-	  clusterArr.at(clIndex).AddPadHit( cluster.HitArr().at(ihit));
-	  //std::cout<< "cl : "<< clusterArr.at(clIndex).HitArr().size() << std::endl;
-	}
-	clusterArr.at(clIndex).Evaluate();
-	/*
-	std::cout<< clIndex  << "\t"
-		 << cluster.HitArr().size() << "\t"
-		 << cluster.nHit()          << "\t"
-		 << cluster.Energy()        << "\t"
-		 << cluster.YMin()          << "\t"
-		 << cluster.YMax()          << "\t"
-		 << clusterArr.at(clIndex).HitArr().size() << "\t"
-		 << clusterArr.at(clIndex).nHit() << std::endl;
-	*/
-	//std::cout<< clusterArr.at(clIndex).HitArr().size() << std::endl;
-	clusterID++;
-      }else{ break; }
-    }
-    /*
-    for ( int ihit = 0; ihit < clusterArr.size(); ihit++){
-      std::cout << ihit << "\t"
-		<< clusterArr.at(ihit).HitArr().size() << "\t"
-		<< clusterArr.at(ihit).nHit() << std::endl;
-    }
-    */
-
-    if( hitArr.size() == 0){ break; }
-  }
-  //return clusterArr;
-  return true;
-}
-
-Bool_t HitClustering( TClonesArray* HitArr, std::vector<TPCCluster> &clusterArr ){
-  TClass* cl = HitArr->GetClass();
-  if( strcmp( "TPCPadHit", cl->GetName()) != 0 ){
-    return false;
-  }
-
-  std::vector<TPCPadHit> hitArr;
-  for( int i = 0; i< HitArr->GetEntries(); i++){
-    TPCPadHit* hit = (TPCPadHit*)HitArr->At(i);
-    hitArr.push_back(*hit);
-  }
-  HitClustering( hitArr, clusterArr );
-  return true;
-}
-Bool_t HitClustering( std::vector<TPCPadHit>& hitArr, std::vector<TPCCluster> &clusterArr ){
-  clusterArr.clear();
-  Int_t ClusterID = 0;
-  Int_t clIndex = 0;
-  for( int irow = 4; irow < 32; irow++){
-    //std::cout<< "irow " << irow << std::endl;
-    Int_t nRow = 0;
-    for( int i = 0; i< hitArr.size(); i++){
-      if( hitArr.at(i).Row() == irow){ nRow++; }
-    }
-    while(nRow > 0 ){
-      std::vector<TPCPadHit> sub_hitArr;
-      Int_t clusterHitSize = 0;
-      ///Check first hit ///
-      for( int ihit = 0; ihit < hitArr.size(); ihit++){
-	if( hitArr.at(ihit).Row() == irow ){
-	  if( sub_hitArr.size() == 0){
-	    sub_hitArr.push_back( hitArr.at(ihit));
-	    hitArr.erase(hitArr.begin()+ihit);
-	    break;
-	  }
-	}
-      }
-      if( sub_hitArr.size() == 0 ){ break; }
-
-      /// Add adjacent hits to sub_hitArr
-      for( int ihit = 0; ihit < sub_hitArr.size(); ihit++){
-	for( int jhit = 0; jhit < hitArr.size();){
-	  if( TMath::Abs(hitArr.at(jhit).Col() - sub_hitArr.at(ihit).Col()) < 2 &&
-	      TMath::Abs(hitArr.at(jhit).Position().Y() - sub_hitArr.at(ihit).Position().Y()) < 10 &&
-	      hitArr.at(jhit).Row() == irow ){
-	    sub_hitArr.push_back(hitArr.at(jhit));
-	    hitArr.erase( hitArr.begin() + jhit);
-	  }else{
-	    jhit++;
-	  }
-	}
-      }
-
-      if( sub_hitArr.size() == 0 ){ break; }
-      Int_t RowID(-1);
-      Double_t ColID(0);
-      Double_t ColRMS(0);
-      Double_t X(0),Y(0),Z(0);
-      Double_t YMin(9999);
-      Double_t YMax(-9999);
-      Double_t ColMin(9999);
-      Double_t ColMax(-9999);
-      Double_t PhiMin(9999);
-      Double_t PhiMax(-9999);
-      Double_t TotalEnergy(0);
-
-      RowID = irow;
-      for( int ihit = 0; ihit < sub_hitArr.size(); ihit++){
-	TotalEnergy += sub_hitArr.at(ihit).Energy();
-	ColID       += sub_hitArr.at(ihit).Energy()*sub_hitArr.at(ihit).Col();
-	ColRMS      += sub_hitArr.at(ihit).Energy()*TMath::Power(sub_hitArr.at(ihit).Col(),2);
-	Y           += sub_hitArr.at(ihit).Energy()*sub_hitArr.at(ihit).Position().Y();
-
-	if( YMin > sub_hitArr.at(ihit).Position().Y() ){ YMin = sub_hitArr.at(ihit).Position().Y();}
-	if( YMax < sub_hitArr.at(ihit).Position().Y() ){ YMax = sub_hitArr.at(ihit).Position().Y();}
-	if( ColMin > sub_hitArr.at(ihit).Position().Y()){ ColMin = sub_hitArr.at(ihit).Col();}
-	if( ColMax < sub_hitArr.at(ihit).Position().Y()){ ColMax = sub_hitArr.at(ihit).Col();}
-	if( PhiMin > sub_hitArr.at(ihit).Phi() ){ PhiMin = sub_hitArr.at(ihit).Phi();}
-	if( PhiMax < sub_hitArr.at(ihit).Phi() ){ PhiMax = sub_hitArr.at(ihit).Phi();}
-      }
-      ColID = ColID / TotalEnergy;
-      ColRMS= ColRMS/ TotalEnergy - ColID*ColID;
-
-      Double_t Rad = TPCGlobals::sTPC_Pad_Parameter[RowID][2];
-      Double_t ColThetaDeg = (-180 + TPCGlobals::sTPC_Pad_Parameter[RowID][4] + (ColID+0.5)*TPCGlobals::sTPC_Pad_Parameter[RowID][3]);
-      X = Rad * TMath::Sin( ColThetaDeg * TMath::DegToRad() );
-      Y = Y / TotalEnergy;
-      Z = TPCGlobals::sTPC_zOffset + Rad * TMath::Cos( ColThetaDeg * TMath::DegToRad() );
-
-      /// Set Cluster information using sub_hitArr
-      TPCCluster cluster(ClusterID, Y, TotalEnergy);
-      cluster.ID       = ClusterID;
-      cluster.Row      = irow;
-      cluster.YMin     = YMin;
-      cluster.YMax     = YMax;
-      cluster.Col      = ColID;
-      cluster.ColMin   = ColMin;
-      cluster.ColMax   = ColMax;
-      cluster.PhiMin   = PhiMin;
-      cluster.PhiMax   = PhiMax;
-      cluster.Position = TVector3(X,Y,Z);
-      cluster.NHit     = sub_hitArr.size();
-      cluster.Mother   = -1;
-      cluster.Daughter = -1;
-      cluster.MinMotherDist = -1;
-      cluster.MinDaughterDist = -1;
-      cluster.nDaughter= 0;
-      cluster.nMother  = 0;
-      cluster.MotherID.clear();
-      cluster.DaughterID.clear();
-      cluster.Blocked = false;
-      //std::cout<< PhiMin << "\t" << cluster.PhiMin << "\t" << PhiMax << "\t" << cluster.PhiMax << std::endl;
-      /*
-      std::cout<< cluster.ID << "\t"
-	       << cluster.Mother << "\t"
-	       << cluster.Daughter << "\t"
-	       << cluster.nMother << "\t"
-	       << cluster.nDaughter << "\t"
-	       << cluster.MotherID.size() << "\t"
-	       << cluster.DaughterID.size() << "\t"
-	       << cluster.Energy << "\t"
-	       << cluster.PhiMin << "\t"
-	       << cluster.PhiMax << "\t"
-	       << cluster.NHit << std::endl;
-      */
-      clusterArr.push_back( cluster );
-      ClusterID++;
-
-      nRow = 0;
-      for( int i = 0; i< hitArr.size(); i++){
-	if( hitArr.at(i).Row() == irow){ nRow++; }
-      }
-      if( ClusterID >= 200 ){ return false; }
-    }
-  }
-
-
-
-  ////// connection
-  for( Int_t icl = 0; icl < clusterArr.size(); icl++){
-    Int_t cRow = clusterArr.at( icl ).Row;
-    Int_t Mother = clusterArr.at(icl).ID;
-
-    //// Find Daughter at next row
-    Bool_t bFindNext = false;
-    for( Int_t iloop = 0; iloop < 3; iloop++){
-      for( Int_t jcl =0; jcl < clusterArr.size(); jcl++){
-	if( icl != jcl ){ continue; }
-	Int_t dRow  = clusterArr.at(jcl).Row;
-	if( cRow != dRow - 1 ){ continue; }
-	if( !AdjCluster( clusterArr.at(icl), clusterArr.at(jcl),1) ){
-	  /// not connected
-	continue;
-	}else{
-	  /// connected
-	  TVector3 dp  = clusterArr.at(icl).Position - clusterArr.at(jcl).Position;
-	  Double_t dist = dp.Mag();
-	  clusterArr.at(icl).DaughterID.push_back( clusterArr.at(jcl).ID);
-	  clusterArr.at(jcl).MotherID.push_back( clusterArr.at(icl).ID);
-	  clusterArr.at(icl).nDaughter = clusterArr.at(icl).DaughterID.size();
-	  clusterArr.at(jcl).nMother   = clusterArr.at(jcl).MotherID.size();
-	  if( clusterArr.at(icl).MinDaughterDist > 0 &&
-	      clusterArr.at(icl).MinDaughterDist > dist ){
-	    clusterArr.at(icl).MinDaughterDist = dist;
-	  }
-	  if( clusterArr.at(jcl).MinMotherDist > 0 &&
-	      clusterArr.at(jcl).MinMotherDist > dist ){
-	    clusterArr.at(jcl).MinMotherDist = dist;
-	  }
-	  bFindNext = true;
-	}
-      }
-      if( bFindNext ){ break; }
-    }
-  }
-  /*
-  for( int i = 0; i< clusterArr.size(); i++){
-    std::cout<< clusterArr.at(i).ID << "\t"
-	     << clusterArr.at(i).Mother << "\t"
-	     << clusterArr.at(i).Daughter << "\t"
-	     << clusterArr.at(i).nMother << "\t"
-	     << clusterArr.at(i).nDaughter << "\t"
-	     << clusterArr.at(i).MotherID.size() << "\t"
-	     << clusterArr.at(i).DaughterID.size() << "\t"
-	     << clusterArr.at(i).Energy << "\t"
-	     << clusterArr.at(i).PhiMin << "\t"
-	     << clusterArr.at(i).PhiMax << "\t"
-	     << clusterArr.at(i).NHit << std::endl;
-  }
-  */
-  return true;
-}
-
-
-Bool_t AdjCluster( TPCCluster c_0, TPCCluster c_1, Int_t DRow ){
-  /*
-  Double_t c0Min = c_0.PhiMin;
-  Double_t c0Max = c_0.PhiMax;
-  Double_t c1Min = c_1.PhiMin;
-  Double_t c1Max = c_1.PhiMax;
-  */
-
-  Double_t c0Min = c_0.PhiMin - TPCGlobals::sTPC_Pad_Parameter[c_0.Row][3]/2.*TMath::DegToRad();
-  Double_t c0Max = c_0.PhiMax + TPCGlobals::sTPC_Pad_Parameter[c_0.Row][3]/2.*TMath::DegToRad();
-  Double_t c1Min = c_1.PhiMin - TPCGlobals::sTPC_Pad_Parameter[c_1.Row][3]/2.*TMath::DegToRad();
-  Double_t c1Max = c_1.PhiMax + TPCGlobals::sTPC_Pad_Parameter[c_1.Row][3]/2.*TMath::DegToRad();
-
-  if(( c_1.Row - c_0.Row == DRow) &&
-     ( c0Min <= c1Max && c0Max >= c1Min ) &&
-     ( TMath::Abs( c_1.Position.Y() - c_0.Position.Y()) < 60 )){
-    return kTRUE;
-  }else{
-    /*
-    if( c_1.Row - c_0.Row == DRow ){
-      std::cout<<"Debug: " << DRow << "\t"
-	       << c_0.Row << "\t" << c_0.PhiMin << "\t" <<  c_0.PhiMax << "\t"
-	       << c_1.Row << "\t" << c_1.PhiMin << "\t" <<  c_1.PhiMax << std::endl;
-    }
-    */
-    return kFALSE;
-  }
-}
-Bool_t AdjCluster( TPCCluster* c_0, TPCCluster* c_1, Int_t DRow){
-
-  Double_t c0Min = c_0->PhiMin;// - TPCGlobals::sTPC_Pad_Parameter[c_0->Row][3]/2.*TMath::DegToRad();
-  Double_t c0Max = c_0->PhiMax;// + TPCGlobals::sTPC_Pad_Parameter[c_0->Row][3]/2.*TMath::DegToRad();
-  Double_t c1Min = c_1->PhiMin;// - TPCGlobals::sTPC_Pad_Parameter[c_1->Row][3]/2.*TMath::DegToRad();
-  Double_t c1Max = c_1->PhiMax;// + TPCGlobals::sTPC_Pad_Parameter[c_1->Row][3]/2.*TMath::DegToRad();
-
-  if(( c_1->Row - c_0->Row == DRow) &&
-     ( c0Min <= c1Max && c0Max >= c1Min ) ){
-    //&&
-    //( TMath::Abs( c_1->Position.Y() - c_0->Position.Y()) < 40 )){
-    return kTRUE;
-
-  }else{
-    /*
-    if( c_1->Row - c_0->Row == DRow ){
-      std::cout<<"Debug: " << DRow << "\t"
-	       << c_0->Row << "\t" << c_0->PhiMin << "\t" <<  c_0->PhiMax << "\t"
-	       << c_1->Row << "\t" << c_1->PhiMin << "\t" <<  c_1->PhiMax << std::endl;
-    }
-    */
-    return kFALSE;
-  }
-
-}
-
-
-void ConnectionFinder( std::vector<TPCCluster> &clArr ){
-
-  for( Int_t icl = 0; icl < clArr.size(); icl++){
-    Int_t cRow = clArr.at( icl ).Row;
-    Int_t Mother = clArr.at(icl).ID;
-
-    //// Find Daughter at next row
-    Bool_t bFindNext = false;
-    for( Int_t iloop = 0; iloop < 3; iloop++){
-      for( Int_t jcl =0; jcl < clArr.size(); jcl++){
-	if( icl != jcl ){ continue; }
-	Int_t dRow  = clArr.at(jcl).Row;
-	if( cRow != dRow - 1 ){ continue; }
-	if( !AdjCluster( clArr.at(icl), clArr.at(jcl),1) ){
-	  /// not connected
-	continue;
-	}else{
-	  /// connected
-	  TVector3 dp  = clArr.at(icl).Position - clArr.at(jcl).Position;
-	  Double_t dist = dp.Mag();
-	  clArr.at(icl).DaughterID.push_back( clArr.at(jcl).ID);
-	  clArr.at(jcl).MotherID.push_back( clArr.at(icl).ID);
-	  clArr.at(icl).nDaughter = clArr.at(icl).DaughterID.size();
-	  clArr.at(jcl).nMother   = clArr.at(jcl).MotherID.size();
-	  if( clArr.at(icl).MinDaughterDist > 0 &&
-	      clArr.at(icl).MinDaughterDist > dist ){
-	    clArr.at(icl).MinDaughterDist = dist;
-	  }
-	  if( clArr.at(jcl).MinMotherDist > 0 &&
-	      clArr.at(jcl).MinMotherDist > dist ){
-	    clArr.at(jcl).MinMotherDist = dist;
-	  }
-	  bFindNext = true;
-	}
-      }
-      if( bFindNext ){ break; }
-    }
-  }
-}
-std::vector< std::vector<TPCCluster> > ConnectionBlocker( std::vector<TPCCluster> &clArr ){
-  std::vector< std::vector<TPCCluster> > BlockList;
-  if( clArr.size() > 200 ) { return BlockList; }
-
-  //std::cout<< "Collect root events " << std::endl;
-  std::vector<Int_t> sidList;
-  for( int i = 0; i< clArr.size(); i++){
-    if( clArr.at(i).nDaughter > 1 ){
-      //std::cout<< clArr.at(i).DaughterID.size() << std::endl;
-      for( int IDsize = 0; IDsize < clArr.at(i).DaughterID.size(); IDsize++){
-	sidList.push_back( clArr.at(i).DaughterID.at(IDsize));
-      }
-    }else if( clArr.at(i).nMother == 0){
-      sidList.push_back( clArr.at(i).ID );
-    }
-  }
-  //std::cout<< "Blocking " << std::endl;
-  for( int id = 0; id < sidList.size(); id++){
-    std::vector<TPCCluster> clBlock;
-    Int_t currentID = sidList.at(id);
-    while( clArr.at(currentID).nDaughter < 2 ){
-      clBlock.push_back( clArr.at(currentID) );
-      if( clArr.at(currentID).nDaughter == 0 ){ continue; }
-      currentID = clArr.at(currentID).Daughter;
-    }
-    if( clBlock.size() == 0 ){ continue; }
-    BlockList.push_back( clBlock );
-  }
-  //std::cout<< "End Blocking" << std::endl;
-  return BlockList;
-}
-
 Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr ){
   //clusterArr.clear();
   clusterArr->Clear();
 
-  std::vector<TPCPadHit> hitArr;
+  std::vector<TPCHit> hitArr;
   for( int i = 0; i< HitArr->GetEntries(); i++){
-    TPCPadHit* hit = (TPCPadHit*)HitArr->At(i);
+    TPCHit* hit = (TPCHit*)HitArr->At(i);
     hitArr.push_back(*hit);
   }
 
@@ -536,7 +144,7 @@ Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr ){
       if( hitArr.at(i).Row() == irow){ nRow++; }
     }
     while(nRow > 0 ){
-      std::vector<TPCPadHit> sub_hitArr;
+      std::vector<TPCHit> sub_hitArr;
       Int_t clusterHitSize = 0;
       ///Check first hit ///
       for( int ihit = 0; ihit < hitArr.size(); ihit++){
@@ -648,7 +256,7 @@ Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr ){
 	if( cRow != dRow - (iloop+1) ){ continue; }
 	if( !AdjCluster(clArr[icl],clArr[jcl],iloop+1) ){
 	  /// not connected
-	continue;
+	  continue;
 	}else{
 	  /// connected
 	  if( clArr[icl].MotherY < -500 ){/// mother is not set
@@ -692,10 +300,12 @@ Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr ){
 	    TVector3 dp(clArr[icl].Position.X() - clArr[jcl].Position.X(),
 			clArr[icl].Position.Y() - clArr[jcl].Position.Y(),
 			clArr[icl].Position.Z() - clArr[jcl].Position.Z());
+	    ///// Should be edited for dist to  xz dist
 	    Double_t dist       = dp.Mag();
 	    Double_t DYDLMother = (clArr[icl].Position.Y()-clArr[icl].MotherY)/clArr[icl].MinMotherDist;
 	    Double_t YExpect    = DYDLMother * dist + clArr[icl].Position.Y();
 	    Double_t DeltaY     = clArr[jcl].Position.Y() - YExpect;
+
 	    if( TMath::Abs(DeltaY) > 20 ){  continue; }
 
 	    clArr[icl].DaughterID.push_back( clArr[jcl].ID);
@@ -737,162 +347,79 @@ Bool_t HitClustering( TClonesArray* HitArr, TClonesArray* clusterArr ){
   }
   return true;
 }
-
-
-std::vector<TPCCluster> TPCClusterBlocker( std::vector<TPCCluster> &clArr, Int_t Direction ){
-  std::vector<TPCCluster> clBlock;
-  Int_t ID=-1;
-  Int_t minimumID=32;
-  Int_t MaximumID= -1;
-  std::vector<int> BlockIndexArr;
-
-  switch( Direction ){
-  case 0:
-    // Blocking inner to outer
-
-    for( Int_t i = 0; i< clArr.size(); i++){
-      if( clArr.at(i).Row < minimumID ){
-	minimumID = clArr.at(i).Row;
-	ID = i;
-      }
-    }
-    clBlock.push_back( clArr.at(ID) );
-    clArr.erase( clArr.begin() + ID );
-    for( int icl = 0; icl < clBlock.size(); icl++){
-      Bool_t bFind = false;
-      if( bFind ){ break; }
-      for( Int_t jcl = 0; jcl< clArr.size();){
-	if( AdjCluster( clBlock.at(icl), clArr.at(jcl),1)){
-	  clArr.at(jcl).Mother = clBlock.at(icl).ID;
-	  clArr.at(jcl).MotherID.push_back( clBlock.at(icl).ID);
-	  clBlock.at(icl).nDaughter = clBlock.at(icl).nDaughter +1;
-	  clBlock.at(icl).DaughterID.push_back( clArr.at(jcl).ID);
-	  clBlock.push_back(clArr.at(jcl));
-	  clArr.erase(clArr.begin() + jcl );
-	  bFind = true;
-	}else{
-	  jcl++;
-	}
-      }
-    }
-    break;
-    /*
-      case 1:
-    // Blocking outer to inner
-    for( Int_t i = 0; i< clArr.size(); i++){
-      if( clArr.at(i).Row > MaximumID ){
-	MaximumID = clArr.at(i).Row;
-	ID = i;
-      }
-    }
-
-    clBlock.push_back( clArr.at(ID) );
-    clArr.erase( clArr.begin() + ID );
-
-    for( int icl = 0; icl < clBlock.size(); icl++){
-      Bool_t bFindFirst  = false;
-      Bool_t bFindSecond = false;
-      Bool_t bFindThird  = false;
-      Bool_t bFind = false;
-      for( Int_t iRepeat = 1; iRepeat <= 3; iRepeat++){
-	if( bFind ){ break; }
-	for( Int_t jcl = 0; jcl< clArr.size();){
-	  if( AdjCluster( clArr.at(icl), clBlock.at(jcl),iRepeat)){
-	    clArr.at(jcl).Mother = clBlock.at(icl).ID;
-	    clArr.at(jcl).MotherID.push_back( clBlock.at(icl).ID);
-	    clBlock.at(icl).nDaughter = clBlock.at(icl).nDaughter +1;
-	    clBlock.at(icl).DaughterID.push_back( clArr.at(jcl).ID);
-	    clBlock.push_back(clArr.at(jcl));
-	    clArr.erase(clArr.begin() + jcl );
-	    bFind = true;
-	  }else{
-	    jcl++;
-	  }
-	}
-      }
-    }
-    break;
-    */
-
-  case 2:
-
-    for( Int_t i = 0; i< clArr.size(); i++){
-      if( clArr.at(i).Row < minimumID ){
-	minimumID = clArr.at(i).Row;
-	ID = i;
-      }
-    }
-    clBlock.push_back( clArr.at(ID) );
-    clArr.erase( clArr.begin() + ID );
-    for( int Row = minimumID+1; Row < 32; Row++){
-      //std::cout<< Row << std::endl;
-      for( int jcl = 0; jcl < clArr.size();){
-	if( clArr.at(jcl).Row != Row ){ jcl++; continue; }
-	Int_t dRow = 1;
-	Bool_t bFind = false;
-	for( int icl = 0; icl < clBlock.size(); icl++){
-	  if( clBlock.at(icl).Row != clArr.at(jcl).Row - dRow ){ continue; }
-	  //std::cout << icl << "/" << clBlock.size() << std::endl;
-	  if( AdjCluster( clBlock.at(icl), clArr.at(jcl), dRow) ){
-	    clArr.at(jcl).Mother = clBlock.at(icl).ID;
-	    clArr.at(jcl).MotherID.push_back( clBlock.at(icl).ID);
-	    clBlock.at(icl).nDaughter = clBlock.at(icl).nDaughter +1;
-	    clBlock.at(icl).DaughterID.push_back( clArr.at(jcl).ID);
-	    clBlock.push_back(clArr.at(jcl));
-	    clArr.erase( clArr.begin()+jcl);
-	    bFind = true;
-	    break;
-	  }
-	}
-
-	if( bFind ){ continue; }
-
-	dRow = 2;
-	for( int icl = 0; icl < clBlock.size(); icl++){
-	  if( clBlock.at(icl).Row != clArr.at(jcl).Row - dRow ){ continue; }
-	  if( AdjCluster( clBlock.at(icl), clArr.at(jcl), dRow) ){
-	    clArr.at(jcl).Mother = clBlock.at(icl).ID;
-	    clArr.at(jcl).MotherID.push_back( clBlock.at(icl).ID);
-	    clBlock.at(icl).nDaughter = clBlock.at(icl).nDaughter +1;
-	    clBlock.at(icl).DaughterID.push_back( clArr.at(jcl).ID);
-	    clBlock.push_back(clArr.at(jcl));
-	    clArr.erase( clArr.begin()+jcl);
-	    bFind = true;
-	    break;
-	  }
-	}
-	if( bFind ){ continue; }
-
-	for( int icl = 0; icl < clBlock.size(); icl++){
-	  if( clBlock.at(icl).Row != clArr.at(jcl).Row - dRow ){ continue; }
-	  if( AdjCluster( clBlock.at(icl), clArr.at(jcl), dRow) ){
-	    clArr.at(jcl).Mother = clBlock.at(icl).ID;
-	    clArr.at(jcl).MotherID.push_back( clBlock.at(icl).ID);
-	    clBlock.at(icl).nDaughter = clBlock.at(icl).nDaughter +1;
-	    clBlock.at(icl).DaughterID.push_back( clArr.at(jcl).ID);
-	    clBlock.push_back(clArr.at(jcl));
-	    clArr.erase( clArr.begin()+jcl);
-	    bFind = true;
-	    break;
-	  }
-	}
-	if( bFind ){ continue; }
-	jcl++;
-      }
-    }
-
-    for( int jcl = 0; jcl < clArr.size();){
-      for( int icl = 0; icl < clBlock.size(); icl++){
-
-      }
-    }
-
-  default:
-    break;
+TPCTrack ConvertToTrack( TClonesArray* clusterArr ){
+  TPCTrack track;
+  track.Init();
+  Int_t Entries = clusterArr->GetEntries();
+  Int_t initialRow = 32;
+  Int_t finalRow = -1;
+  for( int icl = 0; icl < Entries; icl++){
+    TPCCluster* cl = (TPCCluster*)clusterArr->At(icl);
+    if( cl->Row > finalRow ){ finalRow = cl->Row;}
+    if( cl->Row < initialRow ){ initialRow = cl->Row;}
+    track.track->SetPoint( icl, cl->Position.X(), cl->Position.Y(), cl->Position.Z());
+    track.trackErr->SetPoint( icl, cl->PositionErr.X(), cl->PositionErr.Y(), cl->PositionErr.Z());
+    track.EArr.push_back( cl->Energy );
+    track.DepE += cl->Energy;
   }
-  return clBlock;
-}
+  track.InitialRowID = initialRow;
+  track.FinalRowID   = finalRow;
 
+  return track;
+}
+Bool_t AdjCluster( TPCCluster c_0, TPCCluster c_1, Int_t DRow ){
+  /*
+  Double_t c0Min = c_0.PhiMin;
+  Double_t c0Max = c_0.PhiMax;
+  Double_t c1Min = c_1.PhiMin;
+  Double_t c1Max = c_1.PhiMax;
+  */
+
+  Double_t c0Min = c_0.PhiMin - TPCGlobals::sTPC_Pad_Parameter[c_0.Row][3]/2.*TMath::DegToRad();
+  Double_t c0Max = c_0.PhiMax + TPCGlobals::sTPC_Pad_Parameter[c_0.Row][3]/2.*TMath::DegToRad();
+  Double_t c1Min = c_1.PhiMin - TPCGlobals::sTPC_Pad_Parameter[c_1.Row][3]/2.*TMath::DegToRad();
+  Double_t c1Max = c_1.PhiMax + TPCGlobals::sTPC_Pad_Parameter[c_1.Row][3]/2.*TMath::DegToRad();
+
+  if(( c_1.Row - c_0.Row == DRow) &&
+     ( c0Min <= c1Max && c0Max >= c1Min ) &&
+     ( TMath::Abs( c_1.Position.Y() - c_0.Position.Y()) < 40 )){
+    return kTRUE;
+  }else{
+    /*
+    if( c_1.Row - c_0.Row == DRow ){
+      std::cout<<"Debug: " << DRow << "\t"
+	       << c_0.Row << "\t" << c_0.PhiMin << "\t" <<  c_0.PhiMax << "\t"
+	       << c_1.Row << "\t" << c_1.PhiMin << "\t" <<  c_1.PhiMax << std::endl;
+    }
+    */
+    return kFALSE;
+  }
+}
+Bool_t AdjCluster( TPCCluster* c_0, TPCCluster* c_1, Int_t DRow){
+
+  Double_t c0Min = c_0->PhiMin;// - TPCGlobals::sTPC_Pad_Parameter[c_0->Row][3]/2.*TMath::DegToRad();
+  Double_t c0Max = c_0->PhiMax;// + TPCGlobals::sTPC_Pad_Parameter[c_0->Row][3]/2.*TMath::DegToRad();
+  Double_t c1Min = c_1->PhiMin;// - TPCGlobals::sTPC_Pad_Parameter[c_1->Row][3]/2.*TMath::DegToRad();
+  Double_t c1Max = c_1->PhiMax;// + TPCGlobals::sTPC_Pad_Parameter[c_1->Row][3]/2.*TMath::DegToRad();
+
+  if(( c_1->Row - c_0->Row == DRow) &&
+     ( c0Min <= c1Max && c0Max >= c1Min ) ){
+    //&&
+    //( TMath::Abs( c_1->Position.Y() - c_0->Position.Y()) < 40 )){
+    return kTRUE;
+
+  }else{
+    /*
+    if( c_1->Row - c_0->Row == DRow ){
+      std::cout<<"Debug: " << DRow << "\t"
+	       << c_0->Row << "\t" << c_0->PhiMin << "\t" <<  c_0->PhiMax << "\t"
+	       << c_1->Row << "\t" << c_1->PhiMin << "\t" <<  c_1->PhiMax << std::endl;
+    }
+    */
+    return kFALSE;
+  }
+
+}
 std::vector<Int_t> GetListOfTrackRoot(TClonesArray* clArr){// Searching track's root points.
   std::vector<Int_t> BlockIndexList;
   for( Int_t i = 0; i< clArr->GetEntries(); i++){
@@ -912,7 +439,6 @@ std::vector<Int_t> GetListOfTrackRoot(TClonesArray* clArr){// Searching track's 
   }
   return BlockIndexList;
 }
-
 Bool_t ClusterBlocker( TClonesArray* clArr, TClonesArray* blockArr ,std::vector<Int_t> BlockRoot, Int_t BlockIndex){/// TClonesArray("TPCCluster");
   if( BlockIndex >= clArr->GetEntries() ){ return false;}
   if( blockArr->GetEntries() != 0 ){ blockArr->Clear();}
@@ -944,144 +470,106 @@ Bool_t ClusterBlocker( TClonesArray* clArr, TClonesArray* blockArr ,std::vector<
   return true;
 }
 
+ClassImp( TrackHandler )
+TrackHandler* gTrackHandler = new TrackHandler();
 
-
-
-
-std::vector<TPCCluster> TPCClusterSingleBlocker( std::vector<TPCCluster> &clArr){
-  std::vector<TPCCluster> clBlock;
-  Int_t ID=-1;
-  Int_t minimumID=32;
-  Int_t MaximumID= -1;
-  std::vector<int> BlockIndexArr;
-
-  for( Int_t i = 0; i< clArr.size(); i++){
-    if( clArr.at(i).Row < minimumID ){
-      minimumID = clArr.at(i).Row;
-      ID = i;
-    }
+TrackHandler::TrackHandler(){;}
+TrackHandler::~TrackHandler(){;}
+Bool_t TrackHandler::ConversionToTrack( TClonesArray* clusterArr, TPCTrack& track){
+  track.Init();
+  Int_t Entries = clusterArr->GetEntries();
+  Int_t initialRow = 32;
+  Int_t finalRow   = -1;
+  for( int icl = 0; icl < Entries; icl++){
+    TPCCluster* cl = (TPCCluster*)clusterArr->At(icl);
+    if( cl->Row > finalRow ){ finalRow = cl->Row;}
+    if( cl->Row < initialRow ){ initialRow = cl->Row;}
+    track.track->SetPoint( icl, cl->Position.X(), cl->Position.Y(), cl->Position.Z());
+    track.trackErr->SetPoint( icl, cl->PositionErr.X(), cl->PositionErr.Y(), cl->PositionErr.Z());
+    track.EArr.push_back( cl->Energy );
+    track.DepE += cl->Energy;
   }
-
-  clBlock.push_back( clArr.at(ID) );
-  clArr.erase( clArr.begin() + ID );
-
-  for( int icl = 0; icl < clBlock.size(); icl++){
-    Bool_t bFind = false;
-    // find next clusters //
-    Int_t nFind = 0;
-    for( Int_t iRepeat = 1; iRepeat <= 3; iRepeat++){
-      if( bFind ){break;}
-      nFind = 0;
-      for( Int_t jcl = 0; jcl < clArr.size(); jcl++){
-	if( AdjCluster( clBlock.at(icl), clArr.at(jcl),iRepeat)){
-	  bFind = true;
-	  nFind++;
-	}
-      }
-    }
-    if( nFind > 1 ){// branched track
-      break;
-    }
-    bFind = false;
-    for( Int_t iRepeat = 1; iRepeat <= 3; iRepeat++){
-      if( bFind ){ break; }
-      for( Int_t jcl = 0; jcl< clArr.size();){
-	if( AdjCluster( clBlock.at(icl), clArr.at(jcl),iRepeat)){
-	  clArr.at(jcl).Mother = clBlock.at(icl).ID;
-	  clArr.at(jcl).MotherID.push_back(clBlock.at(icl).ID);
-	  clBlock.at(icl).nDaughter = clBlock.at(icl).nDaughter +1;
-	  clBlock.at(icl).DaughterID.push_back(clArr.at(jcl).ID);
-	  clBlock.push_back(clArr.at(jcl));
-	  clArr.erase(clArr.begin() + jcl );
-	  bFind = true;
-	}else{
-	  jcl++;
-	}
-      }
-    }
-  }
-
-  return clBlock;
+  track.InitialRowID = initialRow;
+  track.FinalRowID   = finalRow;
+  /// Fitting Track with helix ///
+  gHelixFitter->FitData( &track );
+  return true;
+}
+void TrackHandler::EvalTrackInit(TPCTrack& track, TVector3 initPoint, Double_t bField ){//Setting initial track information
+  /// Calculate momentum with initial point
 }
 
-Int_t BlockDivider( std::vector<TPCCluster> &clArr, std::vector<TPCCluster> &trackCand, Int_t Mode ){
-  Int_t trackSize=0;
-  Int_t MotherID = -1;
-  Bool_t bBranch = false;
-  switch( Mode ){
-  case 0 : // Edge to center stop at branching point
-    //// find edge ////
-    for( int icl = 0; icl < clArr.size(); icl++ ){
-      if( clArr.at(icl).nDaughter == 0){
-	MotherID = clArr.at(icl).Mother;
-	trackCand.push_back( clArr.at(icl) );
-	clArr.erase( clArr.begin() + icl);
-	trackSize++;
-	break;
-      }
-    }
-    if( trackSize == 0 ){ break; }
-    /// tracking mother ///
-    bBranch = false;
-    for( int icl = 0; icl < trackCand.size(); icl++){
-      if( trackCand.at(icl).Mother == -1 ){ break; }
-      if( bBranch ){ break; }
-      for( int jcl = 0; jcl< clArr.size(); ){
-	if( clArr.at(jcl).ID == MotherID){
-	  MotherID = clArr.at( jcl ).Mother;
-	  trackCand.push_back( clArr.at(jcl) );
-	  trackSize++;
-	  if( clArr.at( jcl ).nDaughter != 1 ){
-	    bBranch = true;
-	    jcl++;
-	  }else{
-	    clArr.erase( clArr.begin() + jcl );
-	  }
-	  break;
-	}else{
-	  jcl++;
-	}
-      }
-    }
-    break;
-  case 1 : // branchingPoint to Center
-    //Searching branching Point ( non ROOT point )
-    for( int icl = 0; icl < clArr.size(); icl++){
-      if(clArr.at(icl).nDaughter > 1 && clArr.at(icl).Mother != -1 ){
-	MotherID = clArr.at(icl).Mother;
-	trackCand.push_back( clArr.at(icl));
-	clArr.erase( clArr.begin() + icl );
-	trackSize++;
-	break;
-      }
-    }
-    if( trackSize == 0){ break; }
+//// returns TPCTrack. if condition were not admitted, return zerosize track.
+TPCTrack* TrackHandler::MergingTrack( TPCTrack* trk0, TPCTrack* trk1 ){
+  TPCTrack* track = new TPCTrack();
 
-    // tracking Mother
-    bBranch = false;
-    for( int icl = 0; icl < trackCand.size(); icl++){
-      if( trackCand.at(icl).Mother == -1 ){ break; }
-      if( bBranch ){ break; }
-      for( int jcl = 0; jcl< clArr.size(); ){
-	if( clArr.at(jcl).ID == MotherID){
-	  MotherID = clArr.at( jcl ).Mother;
-	  trackCand.push_back( clArr.at(jcl) );
-	  trackSize++;
-	  if( clArr.at( jcl ).nDaughter != 1 ){
-	    bBranch = true;
-	    jcl++;
-	  }else{
-	    clArr.erase( clArr.begin() + jcl );
-	  }
-	  break;
-	}else{
-	  jcl++;
-	}
-      }
-    }
-    break;
-  default:
-    break;
+  /// Check track parameters
+  if( trk0->helix.RL != trk1->helix.RL ){ return track; }
+  if( trk0->helix.R > 6000 || trk0->helix.R < 100 ){ return track; }
+  if( trk1->helix.R > 6000 || trk1->helix.R < 100 ){ return track; }
+
+  Int_t direction = 0;/// 1 : trk0 -- trk1,  -1: trk1 -- trk0
+  if( trk0->InitialRowID > trk1->FinalRowID ){
+    direction  = -1;
   }
-  return trackSize;
+  if( trk0->FinalRowID < trk1->InitialRowID ){
+    direction = 1;
+  }
+  if( direction == 0 ){ return track; }
+
+  Double_t DistY0=0;
+  Double_t DistY1=0;
+  Double_t DistR0=0;
+  Double_t DistR1=0;
+  trk0->helix.CalculateDist( trk1->track, DistR0, DistY0 );
+  trk1->helix.CalculateDist( trk0->track, DistR1, DistY1 );
+
+  //// Check Connection
+  if(( DistY0 < 10 && DistR0 < 10 ) ||
+     ( DistY1 < 10 && DistR0 < 10 )){
+    Int_t nPoint0 = trk0->track->GetN();
+    Int_t nPoint1 = trk1->track->GetN();
+    if( direction == 1){/// common order
+      for( int ip = 0; ip < nPoint0; ip++){
+	track->track->SetPoint( ip,
+				trk0->track->GetX()[ip],
+				trk0->track->GetY()[ip],
+				trk0->track->GetZ()[ip]);
+	track->EArr.push_back( trk0->EArr.at(ip));
+	track->DepE += trk0->EArr.at(ip);
+
+      }
+      for( int ip = 0; ip < nPoint1; ip++){
+	track->track->SetPoint( ip + nPoint0,
+				trk1->track->GetX()[ip],
+				trk1->track->GetY()[ip],
+				trk1->track->GetZ()[ip]);
+	track->EArr.push_back( trk1->EArr.at(ip));
+	track->DepE += trk1->EArr.at(ip);
+      }
+      track->InitialRowID = trk0->InitialRowID;
+      track->FinalRowID   = trk1->FinalRowID;
+
+    }else if( direction == -1 ){/// reverse order
+      for( int ip = 0; ip < nPoint1; ip++){
+	track->track->SetPoint( ip,
+				trk1->track->GetX()[ip],
+				trk1->track->GetY()[ip],
+				trk1->track->GetZ()[ip]);
+	track->EArr.push_back( trk1->EArr.at(ip));
+	track->DepE += trk1->EArr.at(ip);
+      }
+      for( int ip = 0; ip < nPoint0; ip++){
+	track->track->SetPoint( ip + nPoint1,
+				trk0->track->GetX()[ip],
+				trk0->track->GetY()[ip],
+				trk0->track->GetZ()[ip]);
+	track->EArr.push_back( trk0->EArr.at(ip));
+	track->DepE += trk0->EArr.at(ip);
+      }
+      track->InitialRowID = trk1->InitialRowID;
+      track->FinalRowID   = trk0->FinalRowID;
+    }
+  }else{ return track; }
+  return track;
 }

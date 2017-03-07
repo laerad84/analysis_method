@@ -154,6 +154,9 @@ class TPCPadHitCluster : public TObject {
 
 TPCPadHitCluster  TPCClusterer( int rowID, std::vector<TPCPadHit> &hitArr);
 TPCPadHitCluster  TPCClusterer( int rowID, std::vector<TPCPadHit> &hitArr, Int_t MCTrackID );
+
+
+/*
 class TPCTrack : public TObject {
  public:
   TPCTrack();
@@ -186,7 +189,7 @@ class TPCTrack : public TObject {
  public:
   ClassDef( TPCTrack, 0 )
 };
-
+*/
 std::vector<TPCPadHitCluster> TPCTrackBlocking(std::vector<TPCPadHitCluster> &clusterArr,Int_t Direction=0);//0 inner->outer 1 outer->inner
 std::vector<TPCPadHitCluster> TPCRootClusters(std::vector<TPCPadHitCluster> clusterArr);
 std::vector<TPCPadHitCluster> TPCEdgeClusters(std::vector<TPCPadHitCluster> clusterArr);
