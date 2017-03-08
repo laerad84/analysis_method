@@ -1,5 +1,5 @@
 #ifndef RECONSTRUCTION__H__
-#define RECONSTRUCTIONI__H__
+#define RECONSTRUCTION__H__
 #include "Data.h"
 #include "CalculationFunction.h"
 #include "Particles.h"
