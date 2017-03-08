@@ -42,7 +42,7 @@ class HyperCalculator : public TObject{
   virtual ~HyperCalculator();
   // List of calculation funciton
 
-  static TVector3 CalulateMomentum( HHelix sprial, TVector3 pos, Double_t dtesla = 1.);
+  static TVector3 CalculateMomentum( HHelix sprial, TVector3 pos, Double_t dtesla = 1.);
   static Bool_t   CCCrossing( HHelix sprial0, HHelix sprial1, TVector3& vec, double& dist );//// Calculate circle - circle crossing
   static Bool_t   CLCrossing( HHelix sprial, HLine line, TVector3& vec, double& dist );//// Calculate circle - line crossing
   static Bool_t   LLCrossing( HLine line0, HLine line1, TVector3& vec, double& dist );//// Calculate line -line crossing

@@ -314,7 +314,7 @@ HyperCalculator::~HyperCalculator(){
 TVector3 HyperCalculator::CalculateMomentum( HHelix sprial, TVector3 pos, Double_t dtesla ){
   TVector3 momentum(0,0,0);
   // Calculate center to point direction
-  TVector3 vecNorm( pos.X() - sprial.X(),0, pos.Z() - sprial.Z());
+  TVector3 vecNorm( pos.X() - sprial.X,0, pos.Z() - sprial.Z);
   if( sprial.RL > 0 ){
     // RL > 0 : positive
     vecNorm.RotateY( TMath::DegToRad() * 90 );
@@ -410,7 +410,7 @@ Bool_t HyperCalculator::LLCrossing( HLine line0, HLine line1, TVector3& vec, dou
   TVector3 vCross = (v0.Cross(v1)).Unit();
   Double_t d0     = line0.Offset.Dot(vCross);
   Double_t d1     = line1.Offset.Dot(vCross);
-  Double_t vn     = (d1 - d0)*vCross;
+  TVector3 vn     = (d1 - d0)*vCross;
 
   // Calculate displacement of offsets
   TVector3 vl     = line1.Offset - line0.Offset - vn;
