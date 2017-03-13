@@ -36,7 +36,8 @@ CXXFLAGS    += -g -fmessage-length=0 -fpermissive #-O2
 LIBS        += $(shell $(ROOTSYS)/bin/root-config --glibs) -lEG -lGeom
 LIBS        += -L/usr/local/Cellar/libusb/1.0.20/lib -lusb-1.0
 LIBS        += -L$(GENFITDIR)/lib -lgenfit2
-LIBS        += -L$(BOOSTDIR)/lib -lboost_atomic -lboost_filesystem -lboost_math_c99 -lboost_prg_exec_monitor -lboost_signals -lboost_wave -lboost_chrono -lboost_graph -lboost_math_c99f -lboost_program_options -lboost_system -lboost_wserialization -lboost_container -lboost_math_c99l -lboost_thread -lboost_context -lboost_locale -lboost_math_tr1 -lboost_random -lboost_timer -lboost_coroutine -lboost_log -lboost_math_tr1f -lboost_regex -lboost_type_erasure -lboost_date_time -lboost_log_setup -lboost_math_tr1l -lboost_serialization -lboost_unit_test_framework #-lboost_python
+LIBS        += -L$(BOOSTDIR)/lib
+LIBS        += -L$(BOOSTDIR)/libs -lboost_atomic -lboost_filesystem -lboost_math_c99 -lboost_prg_exec_monitor -lboost_signals -lboost_wave -lboost_chrono -lboost_graph -lboost_math_c99f -lboost_program_options -lboost_system -lboost_wserialization -lboost_container -lboost_math_c99l -lboost_thread -lboost_context -lboost_locale -lboost_math_tr1 -lboost_random -lboost_timer -lboost_coroutine -lboost_log -lboost_math_tr1f -lboost_regex -lboost_type_erasure -lboost_date_time -lboost_log_setup -lboost_math_tr1l -lboost_serialization -lboost_unit_test_framework #-lboost_python
 LIBS        += -L$(E42_TOP_DIR)/lib/so -lGsimData
 
 
@@ -45,6 +46,7 @@ INCLUDEDIR  += $(ROOTSYS)/include
 INCLUDEDIR  += $(LIBUSB_INC)
 INCLUDEDIR  += $(GENFITDIR)/include
 INCLUDEDIR  += $(BOOSTDIR)/include
+INCLUDEDIR  += $(BOOSTDIR)
 INCLUDEDIR  += $(E42_TOP_DIR)/include
 
 ifeq ($(UNAME), Linux)

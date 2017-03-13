@@ -200,7 +200,7 @@ Bool_t CalculateCircleCrossing( HHelix sprial0, HHelix sprial1, TVector3& vec0, 
       dist < TMath::Abs(r0 -r1 )){
     Double_t y0 = CalculateY( sprial0, TVector3( sprial1.X,0,sprial1.Z));
     Double_t y1 = CalculateY( sprial1, TVector3( sprial0.X,0,sprial0.Z));
-    TVector3 pVec(sprial0.X - sprial1.X, 0, sprial1.Z - sprial1.Z);
+    TVector3 pVec(sprial0.X - sprial1.X, 0, sprial0.Z - sprial1.Z);
     TVector3 nVec = pVec.Unit();
     TVector3 vv0 = TVector3( sprial0.X, y0, sprial0.Z ) + sprial0.R*nVec;
     TVector3 vv1 = TVector3( sprial1.X, y1, sprial1.Z ) - sprial1.R*nVec;
@@ -311,6 +311,23 @@ HyperCalculator::HyperCalculator(){
 HyperCalculator::~HyperCalculator(){
   ;
 }
+HLine HyperCalculator::GenerateLine( TLorentzVector mom, TVector3 pos ){
+  HLine line;
+  TVector3 vec( mom.Px(), mom.Py(), mom.Pz());
+  line.Direction = vec.Unit();
+  line.Offset    = pos;
+  line.bNorm     = kTRUE;
+  return line;
+}
+HLine HyperCalculator::GenerateLine( TVector3 mom, TVector3 pos ){
+  HLine line;
+  line.Direction = mom.Unit();
+  line.Offset    = pos;
+  line.bNorm     = kTRUE;
+  return line;  
+}
+
+
 TVector3 HyperCalculator::CalculateMomentum( HHelix sprial, TVector3 pos, Double_t dtesla ){
   TVector3 momentum(0,0,0);
   // Calculate center to point direction
@@ -334,9 +351,91 @@ TVector3 HyperCalculator::CalculateMomentum( HHelix sprial, TVector3 pos, Double
 }
 
 Bool_t HyperCalculator::CCCrossing( HHelix sprial0, HHelix sprial1, TVector3& vec, double& dist ){
-  Bool_t bConnected = CalculateCrossing( sprial0, sprial1, dist, vec);
-  return bConnected;
+  Double_t centerDist = TMath::Sqrt(TMath::Power( sprial0.X - sprial1.X, 2)+
+				    TMath::Power( sprial0.Z - sprial1.Z, 2));
+  if( centerDist > sprial0.R + sprial1.R ||
+      centerDist < TMath::Abs( sprial0.R - sprial1.R )){
+    std::cout<< "Notconnected : "<< centerDist << "\t" << sprial0.R << "\t" << sprial1.R  << std::endl;
+
+    /// Not connected 
+    /// Calculate closet point 
+    TVector3 c0( sprial0.X, 0, sprial0.Z);
+    TVector3 c1( sprial1.X, 0, sprial1.Z); 
+    TVector3 vD =( c1 - c0 ).Unit();
+    TVector3 cc0 = c0 + sprial0.R*vD;
+    TVector3 cc1 = c1 - sprial1.R*vD;
+    
+    /// Calculate y0;
+    Double_t iTheta0 = TMath::ATan2( sprial0.InitPos.X() - sprial0.X,
+				     sprial0.InitPos.Z() - sprial0.Z);
+    Double_t theta0  = TMath::ATan2( cc0.X() - sprial0.X,
+				     cc0.Z() - sprial0.Z);
+    Double_t y0      = (theta0 - iTheta0)*sprial0.DY/sprial0.DTheta - sprial0.InitPos.Y();
+
+    /// Calculate y1;
+    Double_t iTheta1 = TMath::ATan2( sprial1.InitPos.X() - sprial1.X,
+				     sprial1.InitPos.Z() - sprial1.Z);
+    Double_t theta1  = TMath::ATan2( cc1.X() - sprial1.X,
+				     cc1.Z() - sprial1.Z);
+    Double_t y1      = (theta1 - iTheta1)*sprial1.DY/sprial1.DTheta - sprial1.InitPos.Y();
+
+    cc0.SetY(y0);
+    cc1.SetY(y1);
+    
+    TVector3 vMiddle( (cc0.X() + cc1.X())/2.,
+		      (cc0.X() + cc1.Y())/2.,
+		      (cc0.Z() + cc1.Z())/2.);
+    dist = (cc0 - cc1).Mag();
+    vec = vMiddle;
+    return false; // not connected
+  }else{ 
+    /// Connected 
+    std::cout<< "Connected" << std::endl;
+    TVector3 c0( sprial0.X, 0, sprial0.Z);
+    TVector3 c1( sprial1.X, 0, sprial1.Z);
+    TVector3 RUnit = (c1 - c0).Unit();
+    TVector3 aUnit = RUnit;
+    aUnit.RotateY(90*TMath::DegToRad());
+
+    Double_t d0 = (centerDist*centerDist + sprial0.R*sprial0.R - sprial1.R*sprial1.R)/2./centerDist;
+    Double_t d1 = (centerDist*centerDist - sprial0.R*sprial0.R + sprial1.R*sprial1.R)/2./centerDist;
+    Double_t a  = 0;
+    TVector3 cc0(0,0,0);
+    TVector3 cc1(0,0,0);
+    if( sprial0.R > sprial1.R ){
+      a   = TMath::Sqrt( sprial0.R*sprial0.R - d0*d0 );
+      cc0 = c0 + d0*RUnit + a*aUnit;
+      cc1 = c0 + d0*RUnit - a*aUnit;
+    }else{
+      a   = TMath::Sqrt( sprial1.R*sprial1.R - d1*d1 );
+      cc0 = c1 - d1*RUnit + a*aUnit;
+      cc1 = c1 - d1*RUnit - a*aUnit;
+    }
+
+    Double_t y00 = CalculateY( sprial0, cc0 );
+    Double_t y01 = CalculateY( sprial0, cc1 );
+    Double_t y10 = CalculateY( sprial1, cc0 );
+    Double_t y11 = CalculateY( sprial1, cc1 );
+    Double_t yC  = 0;
+    if( TMath::Abs( y00 - y10 ) < TMath::Abs( y01 - y11 )){
+      // cc0 is cross point 
+      yC   = (y00 + y10 )/2.;
+      dist = TMath::Abs( y00 - y10 );
+      vec.SetXYZ(cc0.X(),yC,cc0.Z());
+    }else{
+      // cc1 is cross point 
+      yC   = (y10 + y11);
+      dist = TMath::Abs( y10 - y11 );
+      vec.SetXYZ(cc1.X(),yC,cc1.Z());
+    }
+    std::cout<< "Circle cross point" << std::endl;
+    std::cout<< dist << std::endl;
+    vec.Print();
+
+    return true; // connected 
+  }
 }
+
 Bool_t HyperCalculator::CLCrossing( HHelix sprial, HLine line, TVector3& vec, double& dist ){
   Double_t mag = TMath::Sqrt( line.Direction.Z()*line.Direction.Z() + line.Direction.X()*line.Direction.X() );
   TVector2 vec_cc( sprial.Z, sprial.X);
@@ -416,8 +515,11 @@ Bool_t HyperCalculator::LLCrossing( HLine line0, HLine line1, TVector3& vec, dou
   TVector3 vl     = line1.Offset - line0.Offset - vn;
   TVector3 vls0   =  vl - ( vl.Dot( v0 ))*v0;
   TVector3 vls1   =  vl - ( vl.Dot( v1 ))*v1;
-  TVector3 vD0    =  vls0.Mag()*(vls0.Dot(v0))*v0;
-  TVector3 vD1    =  vls1.Mag()*(vls1.Dot(v1))*v1;
+  TVector3 vD0    =  vls0.Mag()*(vls0.Dot(v1))*v0;
+  TVector3 vD1    =  vls1.Mag()*(vls1.Dot(v0))*v1;
+  
+  vD0.Print();
+  vD1.Print();
 
   // Calculate closest points on two lines
   TVector3 vC0    = line0.Offset + vD0;

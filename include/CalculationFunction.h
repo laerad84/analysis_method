@@ -15,6 +15,8 @@
 #include "TObject.h"
 #include "TClass.h"
 
+
+
 #include "Data.h"
 
 HCircle  ThreePointCircle(TVector3 init, TVector3 middle, TVector3 final);//return z,x,r
@@ -41,7 +43,8 @@ class HyperCalculator : public TObject{
   HyperCalculator();
   virtual ~HyperCalculator();
   // List of calculation funciton
-
+  static HLine    GenerateLine( TLorentzVector mom, TVector3 pos );
+  static HLine    GenerateLine( TVector3 mom, TVector3 pos );
   static TVector3 CalculateMomentum( HHelix sprial, TVector3 pos, Double_t dtesla = 1.);
   static Bool_t   CCCrossing( HHelix sprial0, HHelix sprial1, TVector3& vec, double& dist );//// Calculate circle - circle crossing
   static Bool_t   CLCrossing( HHelix sprial, HLine line, TVector3& vec, double& dist );//// Calculate circle - line crossing

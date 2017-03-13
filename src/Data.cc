@@ -569,6 +569,7 @@ HPiM::HPiM(){
   Energy      = 0;
   Momentum    = TLorentzVector(0,0,0,0);
   Position    = TVector3(0,0,0);
+  track.Init();
 }
 
 HPiM::HPiM( const HPiM& right ){
@@ -577,6 +578,7 @@ HPiM::HPiM( const HPiM& right ){
   Energy    = right.Energy;
   Momentum  = right.Momentum;
   Position  = right.Position;
+  track     = right.track;
 }
 
 HPiM::~HPiM(){
@@ -589,6 +591,7 @@ void HPiM::Init(){
   Energy      = 0;
   Momentum = TLorentzVector(0,0,0,0);
   Position = TVector3(0,0,0);
+  track.Init();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -601,6 +604,7 @@ HKaonP::HKaonP(){
   Energy      = 0;
   Momentum    = TLorentzVector(0,0,0,0);
   Position    = TVector3(0,0,0);
+  track.Init();
 }
 
 HKaonP::HKaonP( const HKaonP& right ){
@@ -609,6 +613,7 @@ HKaonP::HKaonP( const HKaonP& right ){
   Energy    = right.Energy;
   Momentum  = right.Momentum;
   Position  = right.Position;
+  track     = right.track;
 }
 
 HKaonP::~HKaonP(){
@@ -621,6 +626,7 @@ void HKaonP::Init(){
   Energy      = 0;
   Momentum = TLorentzVector(0,0,0,0);
   Position = TVector3(0,0,0);
+  track.Init();
 }
 
 
@@ -634,6 +640,7 @@ HProton::HProton(){
   Energy      = 0;
   Momentum    = TLorentzVector(0,0,0,0);
   Position    = TVector3(0,0,0);
+  track.Init();
 }
 
 HProton::HProton( const HProton& right ){
@@ -642,6 +649,7 @@ HProton::HProton( const HProton& right ){
   Energy    = right.Energy;
   Momentum  = right.Momentum;
   Position  = right.Position;
+  track     = right.track;
 }
 
 HProton::~HProton(){
@@ -654,6 +662,7 @@ void HProton::Init(){
   Energy      = 0;
   Momentum = TLorentzVector(0,0,0,0);
   Position = TVector3(0,0,0);
+  track.Init();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -668,6 +677,7 @@ HLambda::HLambda(){
   Position    = TVector3(0,0,0);
   proton      = new HProton();
   pion        = new HPiM();
+  Dist        = 0;
 }
 HLambda::HLambda( const HLambda& right ){
   ID        = right.ID;
@@ -677,6 +687,7 @@ HLambda::HLambda( const HLambda& right ){
   Position  = right.Position;
   proton    = right.proton;
   pion      = right.pion;
+  Dist      = right.Dist; 
 }
 HLambda::~HLambda(){
   ;
@@ -689,6 +700,7 @@ void HLambda::Init(){
   Position = TVector3(0,0,0);
   proton->Init();
   pion->Init();
+  Dist = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -703,6 +715,7 @@ HCascade::HCascade(){
   Position    = TVector3(0,0,0);
   lambda      = new HLambda();
   pion        = new HPiM();
+  Dist        = 0;
 }
 
 HCascade::HCascade( const HCascade& right ){
@@ -713,6 +726,7 @@ HCascade::HCascade( const HCascade& right ){
   Position  = right.Position;
   lambda    = right.lambda;
   pion      = right.pion;
+  Dist      = right.Dist;
 }
 HCascade::~HCascade(){
   ;
@@ -725,6 +739,7 @@ void HCascade::Init(){
   Position = TVector3(0,0,0);
   lambda->Init();
   pion->Init();
+  Dist     = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -738,6 +753,7 @@ HDibaryonLL::HDibaryonLL(){
   Position    = TVector3(0,0,0);
   lambda0     = new HLambda();
   lambda1     = new HLambda();
+  Dist        = 0;
 }
 HDibaryonLL::HDibaryonLL( const HDibaryonLL& right ){
   ID        = right.ID;
@@ -747,6 +763,7 @@ HDibaryonLL::HDibaryonLL( const HDibaryonLL& right ){
   Position  = right.Position;
   lambda0   = right.lambda0;
   lambda1   = right.lambda1;
+  Dist      = 0;
 }
 HDibaryonLL::~HDibaryonLL(){
   ;
@@ -759,6 +776,7 @@ void HDibaryonLL::Init(){
   Position = TVector3(0,0,0);
   lambda0->Init();
   lambda1->Init();
+  Dist = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -773,6 +791,7 @@ HDibaryonPC::HDibaryonPC(){
   Position    = TVector3(0,0,0);
   cascade     = new HCascade();
   pion        = new HPiM();
+  Dist        = 0;
 }
 HDibaryonPC::HDibaryonPC( const HDibaryonPC& right ){
   ID        = right.ID;
@@ -782,16 +801,18 @@ HDibaryonPC::HDibaryonPC( const HDibaryonPC& right ){
   Position  = right.Position;
   cascade   = right.cascade;
   pion      = right.pion;
+  Dist      = right.Dist;
 }
 HDibaryonPC::~HDibaryonPC(){
   ;
 }
 void HDibaryonPC::Init(){
-  ID = -1;
-  RecMass = 0;
-  Energy      = 0;
+  ID       = -1;
+  RecMass  = 0;
+  Energy   = 0;
   Momentum = TLorentzVector(0,0,0,0);
   Position = TVector3(0,0,0);
   cascade->Init();
   pion->Init();
+  Dist     = 0;
 }

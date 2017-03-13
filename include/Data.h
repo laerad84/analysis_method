@@ -99,7 +99,8 @@ class HLine : public TObject {
   HLine(Int_t id, TVector3 slope, TVector3 offset);
   HLine(const HLine& right);
   virtual ~HLine();
-  // ax+by+cz+offset= 0;
+  // Line equation
+  // (x - OffsetX)/DirectionX  = (y - OffsetY)/DirectionY = (z - OffsetZ)/DirectionZ;
   Int_t ID;
   TVector3 Direction;
   TVector3 ClosestPoint;
@@ -352,6 +353,7 @@ class HLambda : public TObject{
   HProton*       proton;
   HPiM*          pion;
 
+  Double_t       Dist;
   void Init();
  public:
   ClassDef( HLambda, 1 )
@@ -373,6 +375,7 @@ class HCascade : public TObject{
   HLambda*       lambda;      /// lambda
   HPiM*          pion;        /// pion
 
+  Double_t       Dist;
   void           Init();
  public:
   ClassDef( HCascade, 1 )
@@ -394,6 +397,7 @@ class HDibaryonLL : public TObject {
   HLambda*       lambda0;   /// lambda
   HLambda*       lambda1;   /// lambda
 
+  Double_t       Dist;
   void Init();
  public:
   ClassDef( HDibaryonLL, 1 )
@@ -414,7 +418,8 @@ class HDibaryonPC : public TObject {
   TVector3       Position;
   HCascade*      cascade;
   HPiM*          pion;
-
+  
+  Double_t       Dist;
   void Init();
  public:
   ClassDef( HDibaryonPC, 1 )
